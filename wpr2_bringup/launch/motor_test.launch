@@ -1,0 +1,8 @@
+<launch>
+
+<!-- test motors -->
+ <node pkg="wpr2_bringup" type="wpr2_test_motors" name="wpr2_test_motors"  output="screen">
+    <param name="serial_port" type="string" value="/dev/ftdi"/> 
+</node>
+
+</launch>

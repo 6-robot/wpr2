@@ -1,0 +1,42 @@
+<launch>
+  <arg name="model" default="$(find wpr2_description)/urdf/wpr2.urdf.xacro"/>
+
+  <!-- real namespace -->
+  <group ns="real">
+    <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
+    <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+      <rosparam command="load" file="$(find wpr2_bringup)/config/wpr2.yaml" />
+    </node> -->
+    <node name="wpr2_core" pkg="wpr2_bringup" type="wpr2_core" output="screen">
+      <param name="serial_port" type="string" value="/dev/ftdi"/> 
+      <rosparam command="load" file="$(find wpr2_bringup)/config/wpr2.yaml" />
+    </node>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" >
+      <param name="tf_prefix" value="real"/>
+    </node>
+  </group>
+
+  <!-- plan namespace -->
+  <group ns="plan">
+    <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
+    <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui">
+      <rosparam command="load" file="$(find wpr2_bringup)/config/wpr2.yaml" />
+    </node>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" >
+      <param name="tf_prefix" value="plan"/>
+    </node>
+  </group>
+
+  <!-- root tf -->
+  <node pkg="tf" type="static_transform_publisher" name="world_to_plan_footprint" args="0 1 0 0 0 0 /world /plan/base_footprint 100" />
+  <node pkg="tf" type="static_transform_publisher" name="world_to_real_footprint" args="0 0 0 0 0 0 /world /real/base_footprint 100" />
+
+  <node pkg="wpr2_bringup" type="wpr2_panel.py" name="wpr2_panel"/>
+
+  <node pkg="wpr2_bringup" type="wpr2_arms_test" name="wpr2_arms_test" output="screen"/>
+
+  <!-- RViz node -->
+  <arg name="rvizconfig" default="$(find wpr2_bringup)/rviz/plan.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+</launch>

@@ -1,0 +1,39 @@
+<launch>
+  <master auto="start"/>
+
+  <!--- Base & Lidar -->
+  <include file="$(find wpr2_bringup)/launch/base_lidar.launch" />
+
+  <!-- Map Server -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find wpr2_tutorials)/maps/map.yaml"/>
+
+  <!--- AMCL -->
+  <include file="$(find wpr2_tutorials)/nav_lidar/amcl_omni.launch" />
+
+  <!--- move_base -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base"  output="screen">
+    <rosparam file="$(find wpr2_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find wpr2_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find wpr2_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find wpr2_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+    <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+    <param name="use_dijkstra" value="true"/>
+    <param name="base_local_planner" value="wpbc_local_planner/WpbcLocalPlanner" />
+
+    <param name= "controller_frequency" value="10" type="double"/>
+    <param name= "oscillation_timeout" value="5" type="double"/>
+    <param name= "oscillation_distance" value="0.2" type="double"/>
+  </node>
+
+  <!-- RViz and TF tree -->
+  <arg name="model" default="$(find wpr2_description)/urdf/wpr2.urdf.xacro"/>
+  <arg name="gui" default="false" />
+  <arg name="rvizconfig" default="$(find wpr2_tutorials)/rviz/nav.rviz" />
+
+  <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
+  <param name="use_gui" value="$(arg gui)"/>
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+</launch>

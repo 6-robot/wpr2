@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- Run wpr2 core-->
+  <node pkg="wpr2_bringup" type="wpr2_core" name="wpr2_core" output="screen">
+    <param name="serial_port" type="string" value="/dev/ftdi"/> 
+    <rosparam file="$(find wpr2_bringup)/config/wpr2.yaml" command="load" />
+  </node>
+
+  <!--- Run Lidar -->
+  <include file="$(find wpr2_bringup)/launch/include/lidar_filter.launch" />
+
+</launch>

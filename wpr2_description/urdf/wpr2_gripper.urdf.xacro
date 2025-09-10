@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot name="wpr2" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find wpr2_description)/urdf/base_mecanum.urdf.xacro"/>
+
+  <xacro:include filename="$(find wpr2_description)/urdf/torso.xacro"/>
+
+  <!-- Left Arm -->
+  <xacro:include filename="$(find wpr2_description)/urdf/arm_left_gripper.urdf.xacro"/>
+  <xacro:arm_left base_frame="chest_link" x="0.035" y="-0.18" z="0.0" roll="0" pitch="0" yaw="${M_PI}"/>
+
+  <!-- Right Arm -->
+  <xacro:include filename="$(find wpr2_description)/urdf/arm_right_gripper.urdf.xacro"/>
+  <xacro:arm_right base_frame="chest_link" x="0.035" y="0.18" z="0.0" roll="0" pitch="0" yaw="${M_PI}"/>
+
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/wpr2</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+      <legacyModeNS>true</legacyModeNS>
+    </plugin>
+  </gazebo>
+
+</robot>
