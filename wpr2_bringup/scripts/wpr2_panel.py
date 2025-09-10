@@ -4,17 +4,13 @@
 import sys
 import rospy
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer 
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 
 class WPR2Panel(QWidget):
     def __init__(self):
         super().__init__()
-
-        # 初始化 ROS 节点
-        rospy.init_node('wpr2_panel', anonymous=True)
-
         # 为 wpr2_cmd 话题创建发布者
         self.wpr2_cmd_pub = rospy.Publisher('wpr2_cmd', String, queue_size=10)
         
@@ -76,7 +72,23 @@ class WPR2Panel(QWidget):
         main_layout.addLayout(bottom_layout)
         
         self.setLayout(main_layout)
+
+        # 2. 创建并启动一个定时器来检查ROS关闭信号
+        self.ros_timer = QTimer(self)
+        self.ros_timer.timeout.connect(self.check_ros_shutdown)
+        self.ros_timer.start(100)  # 设置检查间隔为100毫秒
+
         self.show()
+
+    # 3. 检查ROS状态并关闭UI的方法
+    def check_ros_shutdown(self):
+        """
+        定期检查 rospy.is_shutdown()。如果为True，则关闭Qt应用。
+        """
+        if rospy.is_shutdown():
+            # 当ROS关闭时，这个方法会关闭PyQt窗口，
+            # 从而让 app.exec_() 返回，程序得以干净地退出。
+            self.close()
 
     def _get_velocity_publisher(self):
         """ 根据输入框中的话题名创建或复用发布者 """
@@ -115,7 +127,7 @@ class WPR2Panel(QWidget):
         rospy.loginfo(f"发布速度到话题 '{pub.name}': linear=({linear_x}, {linear_y}), angular={angular_z}")
 
         if auto_stop:
-            # 创建一个一次性的定时器，3秒后调用 stop_robot。 [11, 12]
+            # 创建一个一次性的定时器，3秒后调用 stop_robot
             self.stop_timer = rospy.Timer(rospy.Duration(3), self.stop_robot, oneshot=True)
 
     # --- 速度控制按钮回调函数 ---
@@ -127,21 +139,21 @@ class WPR2Panel(QWidget):
         self._publish_velocity(linear_x=-0.1)
 
     def move_left(self):
-        self._publish_velocity(linear_y=0.1) # ROS中通常用linear.x表示前进, linear.y表示侧移
+        self._publish_velocity(linear_y=0.1)
 
     def move_right(self):
         self._publish_velocity(linear_y=-0.1)
 
     def turn_left(self):
-        self._publish_velocity(angular_z=0.5) # 逆时针为正
+        self._publish_velocity(angular_z=0.5)
 
     def turn_right(self):
-        self._publish_velocity(angular_z=-0.5) # 顺时针为负
+        self._publish_velocity(angular_z=-0.5)
 
     def stop_robot(self, event=None):
         """ 停止机器人运动 """
         rospy.loginfo("发送停止指令")
-        self._publish_velocity(auto_stop=False) # 发送停止指令时不需要再自动停止
+        self._publish_velocity(auto_stop=False)
 
     # --- wpr2_cmd 按钮回调函数 ---
 
@@ -161,9 +173,14 @@ class WPR2Panel(QWidget):
 
 
 if __name__ == '__main__':
-    try:
-        app = QApplication(sys.argv)
-        panel = WPR2Panel()
-        sys.exit(app.exec_())
-    except rospy.ROSInterruptException:
-        pass
+    # 首先初始化 ROS 节点
+    rospy.init_node('wpr2_panel', anonymous=True)
+    
+    # 然后创建Qt应用和窗口
+    app = QApplication(sys.argv)
+    panel = WPR2Panel()
+    
+    # 运行Qt事件循环。当窗口关闭时，app.exec_()会返回。
+    # sys.exit() 确保程序以正确的状态码退出。
+    # 之前的 try/except 块在这里不再需要，因为关闭逻辑已由QTimer处理。
+    sys.exit(app.exec_())
