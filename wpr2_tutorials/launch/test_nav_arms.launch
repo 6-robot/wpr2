@@ -44,4 +44,7 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
 
+  <node pkg="wpr2_tutorials" type="wpr2_nav_arms" name="wpr2_nav_arms" output="screen"/>
+  <node pkg="wpr2_bringup" type="wpr2_panel.py" name="wpr2_panel"/>
+
 </launch>

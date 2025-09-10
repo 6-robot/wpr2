@@ -218,6 +218,7 @@ void cmdCallback(const std_msgs::StringConstPtr& msg)
 
 int main(int argc, char** argv)
 {
+    setlocale(LC_ALL,"");
     ros::init(argc, argv, "demo_map_tool");
 
     init();
