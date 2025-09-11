@@ -60,14 +60,20 @@ CWPR2_driver::CWPR2_driver()
 		arMotorCurrent[i] = 0;
 		arMotorPos[i] = 0;
 	}
-	for (int i = 0; i < 14; i++)
+	for (int i = 0; i < 15; i++)
 	{
 		arJointSpeed[i] = 2000;
-		arJointPos[i] = 2048;
+		arJointPos[i] = 0;
 		arJointCurrentRecv[i] = 0;
 		arJointPosRecv[i] = 0;
 	}
 	arJointSpeed[0] = 18000;
+	arJointPos[2] = -9000;
+	arJointPos[5] = -9000;
+	arJointPos[9] = 9000;
+	arJointPos[12] = 9000;
+	arJointPos[7] = 10000;
+	arJointPos[14] = 10000;
 	fVoltage = 0;
 	nParseCount = 0;
 	fQuatW = 0;

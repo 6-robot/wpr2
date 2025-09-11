@@ -51,9 +51,10 @@
 #include <math.h>
 
 // 定义最大线加速度和角加速度
-const double MAX_LINEAR_STEP = 0.2;  // 单位: m/s^2，可根据需要调整
-const double MAX_ANGULAR_STEP = 0.5; // 单位: rad/s^2，可根据需要调整
-static geometry_msgs::Twist lastVel;
+const double MAX_LINEAR_STEP = 0.2;  // 单位: m/s/loop，可根据需要调整
+const double MAX_ANGULAR_STEP = 0.5; // 单位: rad/s/loop，可根据需要调整
+static geometry_msgs::Twist curVel; // 用于存储当前实际发送给硬件的速度
+static geometry_msgs::Twist targetVel; // 用于存储从 /cmd_vel 接收到的目标速度
 
 static CWPR2_driver wpr2;
 static int nLastMotorPos[4];
@@ -65,50 +66,62 @@ static int arRightArmPos[6];
 static int arRightArmSpeed[6];
 static int nRightGripperPos;
 static int nRightGripperSpeed;
-void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg)
+
+void accelerateControl()
 {
-    //ROS_INFO("[wpr2] liner(%.2f %.2f) angular(%.2f)", msg->linear.x,msg->linear.y,msg->angular.z);
-    // 目标速度
-    double target_vx = msg->linear.x;
-    double target_vy = msg->linear.y;
-    double target_wz = msg->angular.z;
-    
+    // 定义一个足够小的数，用于浮点数比较
+    const double epsilon = 1e-6;
+
+    // 检查当前速度是否已经足够接近目标速度
+    if (std::abs(targetVel.linear.x - curVel.linear.x) < epsilon &&
+        std::abs(targetVel.linear.y - curVel.linear.y) < epsilon &&
+        std::abs(targetVel.angular.z - curVel.angular.z) < epsilon)
+    {
+        // 如果速度相等，则直接返回，不发送新的速度指令
+        return;
+    }
+
     // --- X方向线速度 ---
-    // 计算当前速度与目标速度的差值
-    double delta_vx = target_vx - lastVel.linear.x;
-    // 限制差值的最大值
+    double delta_vx = targetVel.linear.x - curVel.linear.x;
     if (delta_vx > MAX_LINEAR_STEP) {
-        lastVel.linear.x += MAX_LINEAR_STEP;
+        curVel.linear.x += MAX_LINEAR_STEP;
     } else if (delta_vx < -MAX_LINEAR_STEP) {
-        lastVel.linear.x -= MAX_LINEAR_STEP;
+        curVel.linear.x -= MAX_LINEAR_STEP;
     } else {
-        // 如果差值在允许范围内，直接设置为目标值
-        lastVel.linear.x = target_vx;
+        curVel.linear.x = targetVel.linear.x;
     }
 
     // --- Y方向线速度 ---
-    double delta_vy = target_vy - lastVel.linear.y;
+    double delta_vy = targetVel.linear.y - curVel.linear.y;
     if (delta_vy > MAX_LINEAR_STEP) {
-        lastVel.linear.y += MAX_LINEAR_STEP;
+        curVel.linear.y += MAX_LINEAR_STEP;
     } else if (delta_vy < -MAX_LINEAR_STEP) {
-        lastVel.linear.y -= MAX_LINEAR_STEP;
+        curVel.linear.y -= MAX_LINEAR_STEP;
     } else {
-        lastVel.linear.y = target_vy;
+        curVel.linear.y = targetVel.linear.y;
     }
 
     // --- Z方向角速度 ---
-    double delta_wz = target_wz - lastVel.angular.z;
+    double delta_wz = targetVel.angular.z - curVel.angular.z;
     if (delta_wz > MAX_ANGULAR_STEP) {
-        lastVel.angular.z += MAX_ANGULAR_STEP;
+        curVel.angular.z += MAX_ANGULAR_STEP;
     } else if (delta_wz < -MAX_ANGULAR_STEP) {
-        lastVel.angular.z -= MAX_ANGULAR_STEP;
+        curVel.angular.z -= MAX_ANGULAR_STEP;
     } else {
-        lastVel.angular.z = target_wz;
+        curVel.angular.z = targetVel.angular.z;
     }
 
     // 将经过步长限制后的速度发送给底层驱动
-    // lastVel 变量在这里同时扮演了“当前速度状态”和“下一刻要发送的速度”两个角色
-    wpr2.Velocity(lastVel.linear.x, lastVel.linear.y, lastVel.angular.z);
+    wpr2.Velocity(curVel.linear.x, curVel.linear.y, curVel.angular.z);
+}
+
+void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg)
+{
+    //ROS_INFO("[wpr2] liner(%.2f %.2f) angular(%.2f)", msg->linear.x,msg->linear.y,msg->angular.z);
+    // 更新目标速度值
+    targetVel.linear.x = msg->linear.x;
+    targetVel.linear.y = msg->linear.y;
+    targetVel.angular.z = msg->angular.z;
 }
 
 static double kAngleToDegree = 18000/3.1415926;
@@ -129,14 +142,15 @@ void LeftArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
 void LeftGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
     //左手爪
-    int nGripperVal = 12000 - msg->position[0]*100*2000;
-    if(nGripperVal < 0)
-        nGripperVal -= 1000;
-    if(nGripperVal < -4000)
-        nGripperVal = -4000;
-    if(nGripperVal > 10000)
-        nGripperVal = 10000;
-    nLeftGripperPos = nGripperVal;
+    // int nGripperVal = 12000 - msg->position[0]*100*2000;
+    // if(nGripperVal < 0)
+    //     nGripperVal -= 1000;
+    // if(nGripperVal < -4000)
+    //     nGripperVal = -4000;
+    // if(nGripperVal > 10000)
+    //     nGripperVal = 10000;
+    // nLeftGripperPos = nGripperVal;
+    nLeftGripperPos = msg->position[0];
     nLeftGripperSpeed = msg->velocity[0];
     wpr2.SetLeftGripper(nLeftGripperPos,nLeftGripperSpeed);
 }
@@ -158,14 +172,15 @@ void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
 void RightGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
     //右手爪
-    int nGripperVal = 12000 - msg->position[0]*100*2000;
-    if(nGripperVal < 0)
-        nGripperVal -= 1000;
-    if(nGripperVal < -4000)
-        nGripperVal = -4000;
-    if(nGripperVal > 10000)
-        nGripperVal = 10000;
-    nRightGripperPos = nGripperVal;
+    // int nGripperVal = 12000 - msg->position[0]*100*2000;
+    // if(nGripperVal < 0)
+    //     nGripperVal -= 1000;
+    // if(nGripperVal < -4000)
+    //     nGripperVal = -4000;
+    // if(nGripperVal > 10000)
+    //     nGripperVal = 10000;
+    // nRightGripperPos = nGripperVal;
+    nRightGripperPos = msg->position[0];
     nRightGripperSpeed = msg->velocity[0];
     wpr2.SetRightGripper(nRightGripperPos,nRightGripperSpeed);
 }
@@ -217,6 +232,7 @@ static float fOdomZ =0;
 static double fJointPosK = 0.01*M_PI/180;
 static double fWheelPosK = -0.1*M_PI/180;
 static geometry_msgs::Pose2D lastPose;
+static geometry_msgs::Twist lastVel;
 int main(int argc, char** argv)
 {
     setlocale(LC_ALL,"");
@@ -321,6 +337,11 @@ int main(int argc, char** argv)
     odom_delta_msg.y = 0;
     odom_delta_msg.theta = 0;
 
+    // 初始化 curVel 和 targetVel
+    curVel.linear.x = curVel.linear.y = curVel.linear.z = 0;
+    curVel.angular.x = curVel.angular.y = curVel.angular.z = 0;
+    targetVel = curVel;
+
     lastPose.x = lastPose.y = lastPose.theta = 0;
     lastVel.linear.x = lastVel.linear.y = lastVel.linear.z = lastVel.angular.x = lastVel.angular.y = lastVel.angular.z = 0;
     nLastMotorPos[0] = nLastMotorPos[1] = nLastMotorPos[2] = nLastMotorPos[3] = 0;
@@ -328,7 +349,11 @@ int main(int argc, char** argv)
     ros::Rate r(20.0);
     while(n.ok())
     {
+        // 加速度控制
+        accelerateControl();
+        // 关节运动
         wpr2.JointAction();
+        // 读取底盘电路返回数据
         wpr2.ReadNewData();
         // 太长时间没有返回值，认为底盘断电，清零里程计，避免上电后里程计跳动过大
         wpr2.nParseCount ++;
@@ -340,6 +365,9 @@ int main(int argc, char** argv)
             wpr2.arMotorPos[2] =0; nLastMotorPos[2] = 0;
             wpr2.arMotorPos[3] =0; nLastMotorPos[3] = 0;
             wpr2.nParseCount = 0;
+            curVel.linear.x = curVel.linear.y = curVel.linear.z = 0;
+            curVel.angular.x = curVel.angular.y = curVel.angular.z = 0;
+            targetVel = curVel;
             //ROS_INFO("empty");
         }
         
@@ -489,12 +517,13 @@ int main(int argc, char** argv)
         // joint tf
         joint_msg.header.stamp = ros::Time::now();
         joint_msg.header.seq ++;
-        for(int i=0;i<15;i++)
+        for(int i=1;i<15;i++)
         {
             joint_pos[i+4] = wpr2.arJointPosRecv[i]*fJointPosK;
             // ROS_WARN("[tf 发送] msg->position[%d] name=%s  = (%.2f)",i+4, joint_name[i+4].c_str() ,joint_pos[i+4]);
         }
         // torso
+        joint_pos[4] = wpr2.arJointPosRecv[0];
         joint_pos[4] *= 0.000001;
         joint_pos[4] = 0.7-joint_pos[4];
         

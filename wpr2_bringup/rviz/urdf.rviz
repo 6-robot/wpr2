@@ -4,7 +4,9 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /RobotModel1
         - /RobotModel1/Links1
+        - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 1079
@@ -84,7 +86,7 @@ Visualization Manager:
       Collision Enabled: false
       Enabled: true
       Links:
-        All Links Enabled: false
+        All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
@@ -197,7 +199,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: false
+          Value: true
         right_link_0:
           Alpha: 1
           Show Axes: false
@@ -236,7 +238,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -244,12 +246,72 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
+        back_left_foot_link:
+          Value: false
+        back_left_wheel_link:
+          Value: false
+        back_right_foot_link:
+          Value: false
+        back_right_wheel_link:
+          Value: false
+        base_footprint:
+          Value: false
+        base_link:
+          Value: false
+        camera_link:
+          Value: false
+        chest_link:
+          Value: false
+        femto_base:
+          Value: false
+        front_left_foot_link:
+          Value: false
+        front_left_wheel_link:
+          Value: false
+        front_right_foot_link:
+          Value: false
+        front_right_wheel_link:
+          Value: false
+        laser:
+          Value: false
+        left_link_0:
+          Value: false
+        left_link_1:
+          Value: false
+        left_link_2:
+          Value: false
+        left_link_3:
+          Value: false
+        left_link_4:
+          Value: false
+        left_link_5:
+          Value: false
+        left_link_6:
+          Value: false
+        left_link_finger:
+          Value: false
+        right_link_0:
+          Value: false
+        right_link_1:
+          Value: false
+        right_link_2:
+          Value: false
+        right_link_3:
+          Value: false
+        right_link_4:
+          Value: false
+        right_link_5:
+          Value: false
+        right_link_6:
+          Value: false
+        right_link_finger:
+          Value: false
       Marker Alpha: 0.5
       Marker Scale: 0.5
       Name: TF
@@ -257,9 +319,50 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        base_footprint:
+          base_link:
+            back_left_foot_link:
+              {}
+            back_left_wheel_link:
+              {}
+            back_right_foot_link:
+              {}
+            back_right_wheel_link:
+              {}
+            chest_link:
+              femto_base:
+                camera_link:
+                  {}
+              left_link_0:
+                left_link_1:
+                  left_link_2:
+                    left_link_3:
+                      left_link_4:
+                        left_link_5:
+                          left_link_6:
+                            left_link_finger:
+                              {}
+              right_link_0:
+                right_link_1:
+                  right_link_2:
+                    right_link_3:
+                      right_link_4:
+                        right_link_5:
+                          right_link_6:
+                            right_link_finger:
+                              {}
+            front_left_foot_link:
+              {}
+            front_left_wheel_link:
+              {}
+            front_right_foot_link:
+              {}
+            front_right_wheel_link:
+              {}
+            laser:
+              {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -316,7 +419,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.6593695878982544
+      Distance: 2.051539421081543
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -324,17 +427,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.21604812145233154
-        Y: -0.028782548382878304
-        Z: 0.6781954765319824
+        X: -0.14785079658031464
+        Y: -0.023232746869325638
+        Z: 0.5203291773796082
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.28479766845703125
+      Pitch: 0.2747977375984192
       Target Frame: <Fixed Frame>
-      Yaw: 3.1267809867858887
+      Yaw: 0.1667877435684204
     Saved: ~
 Window Geometry:
   Displays:
