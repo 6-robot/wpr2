@@ -133,7 +133,7 @@ namespace wpbc_local_planner
             int y = local_y / costmap->getResolution();
 
             // 检测前方路径点是否在禁行区域或者障碍物里
-            if(i >= target_index_ && i < target_index_ + 10)
+            if(i >= target_index_ && i < target_index_ + 15)
             {
                 int map_index = y * size_x + x;
                 unsigned char cost = map_data[map_index];
@@ -170,7 +170,8 @@ namespace wpbc_local_planner
         {
             double final_yaw = tf::getYaw(pose_final.pose.orientation);
             cmd_vel.linear.x = pose_final.pose.position.x * 1.5;
-            cmd_vel.angular.z = final_yaw * 0.5;
+            cmd_vel.linear.y = pose_final.pose.position.y * 1.5;
+            cmd_vel.angular.z = final_yaw * 0.3;
             if(abs(final_yaw) < 0.1)
             {
                 goal_reached_ = true;
@@ -200,10 +201,11 @@ namespace wpbc_local_planner
             if(i == global_plan_.size()-1)
                 target_pose = pose_base; 
         }
-        cmd_vel.linear.x = target_pose.pose.position.x * 1.5;
-        if(cmd_vel.linear.x < 0)
-            cmd_vel.linear.x =0;
-        cmd_vel.angular.z = target_pose.pose.position.y * 5.0;
+        cmd_vel.linear.x = target_pose.pose.position.x * 0.8;
+        if(cmd_vel.linear.x < -0.3)
+            cmd_vel.linear.x = -0.3;
+        cmd_vel.linear.y = target_pose.pose.position.y * 0.8;
+        cmd_vel.angular.z = target_pose.pose.position.y * 3.0;
         
         return true;
     }

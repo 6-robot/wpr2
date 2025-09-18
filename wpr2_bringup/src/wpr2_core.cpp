@@ -51,8 +51,8 @@
 #include <math.h>
 
 // 定义最大线加速度和角加速度
-const double MAX_LINEAR_STEP = 0.2;  // 单位: m/s/loop，可根据需要调整
-const double MAX_ANGULAR_STEP = 0.5; // 单位: rad/s/loop，可根据需要调整
+const double MAX_LINEAR_STEP = 0.02;  // 单位: m/s/loop，可根据需要调整
+const double MAX_ANGULAR_STEP = 0.1; // 单位: rad/s/loop，可根据需要调整
 static geometry_msgs::Twist curVel; // 用于存储当前实际发送给硬件的速度
 static geometry_msgs::Twist targetVel; // 用于存储从 /cmd_vel 接收到的目标速度
 
