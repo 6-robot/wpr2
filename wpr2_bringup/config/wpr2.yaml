@@ -1,8 +1,8 @@
 zeros:
  femto_height: 0.1
- femto_pitch: -0.4
+ femto_pitch: -0.127
 
- chest_height: 0.5
+ chest_height: 0.7
 
 #  left_finger_joint: 0.03
 #  right_finger_joint: 0.03

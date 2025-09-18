@@ -10,17 +10,24 @@ project(wpr2_tutorials)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   cv_bridge
+  image_transport
   pcl_ros
   roscpp
   rospy
   sensor_msgs
   std_msgs
   tf
+  image_geometry 
+  tf2 
+  tf2_geometry_msgs 
+  tf2_ros
+  message_filters
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -121,8 +128,9 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
