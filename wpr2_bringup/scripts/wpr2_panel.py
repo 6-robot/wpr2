@@ -4,7 +4,7 @@
 import sys
 import rospy
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QGridLayout, QVBoxLayout, QLabel, QHBoxLayout, QSlider
-from PyQt5.QtCore import Qt, QTimer 
+from PyQt5.QtCore import Qt, QTimer
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
@@ -64,8 +64,9 @@ class WPR2Panel(QWidget):
         # 左手爪滑杆
         left_gripper_layout = QHBoxLayout()
         left_gripper_slider = QSlider(Qt.Horizontal)
-        left_gripper_slider.setRange(0, 21900)
-        self.left_gripper_value_label = QLabel('0')
+        # 修改: 将滑杆范围设置为 0-155，以便后续处理为 0-0.155
+        left_gripper_slider.setRange(0, 155)
+        self.left_gripper_value_label = QLabel('0.000') # 修改: 初始显示为浮点数
         left_gripper_layout.addWidget(QLabel('左手爪:'))
         left_gripper_layout.addWidget(left_gripper_slider)
         left_gripper_layout.addWidget(self.left_gripper_value_label)
@@ -74,8 +75,9 @@ class WPR2Panel(QWidget):
         # 右手爪滑杆
         right_gripper_layout = QHBoxLayout()
         right_gripper_slider = QSlider(Qt.Horizontal)
-        right_gripper_slider.setRange(0, 21900)
-        self.right_gripper_value_label = QLabel('0')
+        # 修改: 将滑杆范围设置为 0-155，以便后续处理为 0-0.155
+        right_gripper_slider.setRange(0, 155)
+        self.right_gripper_value_label = QLabel('0.000') # 修改: 初始显示为浮点数
         right_gripper_layout.addWidget(QLabel('右手爪:'))
         right_gripper_layout.addWidget(right_gripper_slider)
         right_gripper_layout.addWidget(self.right_gripper_value_label)
@@ -103,53 +105,56 @@ class WPR2Panel(QWidget):
         
         self.setLayout(main_layout)
 
-        # 2. 创建并启动一个定时器来检查ROS关闭信号
+        # 创建并启动一个定时器来检查ROS关闭信号
         self.ros_timer = QTimer(self)
         self.ros_timer.timeout.connect(self.check_ros_shutdown)
         self.ros_timer.start(100)  # 设置检查间隔为100毫秒
 
         self.show()
 
-    # 3. 检查ROS状态并关闭UI的方法
     def check_ros_shutdown(self):
         """
         定期检查 rospy.is_shutdown()。如果为True，则关闭Qt应用。
         """
         if rospy.is_shutdown():
-            # 当ROS关闭时，这个方法会关闭PyQt窗口，
-            # 从而让 app.exec_() 返回，程序得以干净地退出。
             self.close()
 
-    # --- 新增：滑杆回调函数 ---
+    # --- 修改: 滑杆回调函数 ---
     def left_gripper_slider_changed(self, value):
         """ 左手爪滑杆值变化时的回调函数 """
-        # 更新UI上的数值显示
-        self.left_gripper_value_label.setText(str(value))
+        # 将滑杆的整数值 (0-155) 转换为浮点数值 (0-0.155)
+        position_value = value / 1000.0
+        
+        # 更新UI上的数值显示，格式化为三位小数
+        self.left_gripper_value_label.setText(f"{position_value:.3f}")
         
         # 创建并填充JointState消息
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = rospy.Time.now()
-        joint_state_msg.position = [value]
+        joint_state_msg.position = [position_value] # 使用转换后的浮点数
         joint_state_msg.velocity = [2000]
         
         # 发布消息
         self.left_gripper_pub.publish(joint_state_msg)
-        # rospy.loginfo(f"发布到 'wpr2/left_gripper': position={value}, velocity=2000")
+        # rospy.loginfo(f"发布到 'wpr2/left_gripper': position={position_value}, velocity=2000")
 
     def right_gripper_slider_changed(self, value):
         """ 右手爪滑杆值变化时的回调函数 """
-        # 更新UI上的数值显示
-        self.right_gripper_value_label.setText(str(value))
+        # 将滑杆的整数值 (0-155) 转换为浮点数值 (0-0.155)
+        position_value = value / 1000.0
+
+        # 更新UI上的数值显示，格式化为三位小数
+        self.right_gripper_value_label.setText(f"{position_value:.3f}")
         
         # 创建并填充JointState消息
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = rospy.Time.now()
-        joint_state_msg.position = [value]
+        joint_state_msg.position = [position_value] # 使用转换后的浮点数
         joint_state_msg.velocity = [2000]
         
         # 发布消息
         self.right_gripper_pub.publish(joint_state_msg)
-        # rospy.loginfo(f"发布到 'wpr2/right_gripper': position={value}, velocity=2000")
+        # rospy.loginfo(f"发布到 'wpr2/right_gripper': position={position_value}, velocity=2000")
 
 
     def _get_velocity_publisher(self):
@@ -175,7 +180,6 @@ class WPR2Panel(QWidget):
         if pub is None:
             return
 
-        # 如果存在旧的定时器，先取消它
         if self.stop_timer is not None:
             self.stop_timer.shutdown()
             self.stop_timer = None
@@ -189,7 +193,6 @@ class WPR2Panel(QWidget):
         rospy.loginfo(f"发布速度到话题 '{pub.name}': linear=({linear_x}, {linear_y}), angular={angular_z}")
 
         if auto_stop:
-            # 创建一个一次性的定时器，3秒后调用 stop_robot
             self.stop_timer = rospy.Timer(rospy.Duration(3), self.stop_robot, oneshot=True)
 
     # --- 速度控制按钮回调函数 ---
@@ -233,14 +236,9 @@ class WPR2Panel(QWidget):
 
 
 if __name__ == '__main__':
-    # 首先初始化 ROS 节点
     rospy.init_node('wpr2_panel', anonymous=True)
     
-    # 然后创建Qt应用和窗口
     app = QApplication(sys.argv)
     panel = WPR2Panel()
     
-    # 运行Qt事件循环。当窗口关闭时，app.exec_()会返回。
-    # sys.exit() 确保程序以正确的状态码退出。
-    # 之前的 try/except 块在这里不再需要，因为关闭逻辑已由QTimer处理。
     sys.exit(app.exec_())

@@ -67,7 +67,7 @@ static int arRightArmSpeed[6];
 static int nRightGripperPos;
 static int nRightGripperSpeed;
 
-void accelerateControl()
+void AccelerateControl()
 {
     // 定义一个足够小的数，用于浮点数比较
     const double epsilon = 1e-6;
@@ -124,6 +124,39 @@ void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg)
     targetVel.angular.z = msg->angular.z;
 }
 
+//根据手爪手指的距离计算电机的位置控制值。
+int GripperPosition(double distance_in_meters) 
+{
+    const double max_distance = 0.155;  // 最大距离 (米)
+    const double min_distance = 0.0;    // 最小距离 (米)
+    const int position_at_max_dist = 0; // 最大距离对应的位置值
+    const int position_at_min_dist = 21900; // 最小距离对应的位置值
+
+    // 为防止超出范围的输入导致异常结果，添加边界检查
+    if (distance_in_meters >= max_distance) 
+    {
+        return position_at_max_dist;
+    }
+    if (distance_in_meters <= min_distance) 
+    {
+        return position_at_min_dist;
+    }
+
+    // 使用线性插值公式计算位置值
+    // 公式: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+    // 这里：
+    // x = distance_in_meters
+    // x1 = max_distance, y1 = position_at_max_dist
+    // x2 = min_distance, y2 = position_at_min_dist
+
+    double position = position_at_max_dist + (distance_in_meters - max_distance) *
+                      (static_cast<double>(position_at_min_dist - position_at_max_dist)) /
+                      (min_distance - max_distance);
+
+    // 返回计算出的位置值，并转换为整数
+    return static_cast<int>(position);
+}
+
 static double kAngleToDegree = 18000/3.1415926;
 void LeftArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
@@ -142,17 +175,10 @@ void LeftArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
 void LeftGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
     //左手爪
-    // int nGripperVal = 12000 - msg->position[0]*100*2000;
-    // if(nGripperVal < 0)
-    //     nGripperVal -= 1000;
-    // if(nGripperVal < -4000)
-    //     nGripperVal = -4000;
-    // if(nGripperVal > 10000)
-    //     nGripperVal = 10000;
-    // nLeftGripperPos = nGripperVal;
-    nLeftGripperPos = msg->position[0];
+    nLeftGripperPos = GripperPosition(msg->position[0]);
     nLeftGripperSpeed = msg->velocity[0];
     wpr2.SetLeftGripper(nLeftGripperPos,nLeftGripperSpeed);
+    ROS_WARN("[LeftGripper] 左手爪 = %d", nLeftGripperPos);
 }
 
 void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
@@ -172,17 +198,10 @@ void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
 void RightGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
     //右手爪
-    // int nGripperVal = 12000 - msg->position[0]*100*2000;
-    // if(nGripperVal < 0)
-    //     nGripperVal -= 1000;
-    // if(nGripperVal < -4000)
-    //     nGripperVal = -4000;
-    // if(nGripperVal > 10000)
-    //     nGripperVal = 10000;
-    // nRightGripperPos = nGripperVal;
-    nRightGripperPos = msg->position[0];
+    nRightGripperPos = GripperPosition(msg->position[0]);
     nRightGripperSpeed = msg->velocity[0];
     wpr2.SetRightGripper(nRightGripperPos,nRightGripperSpeed);
+    ROS_WARN("[RightGripper] 右手爪 = %d", nRightGripperPos);
 }
 
 void ChestHeightCallback(const sensor_msgs::JointState::ConstPtr& msg)
@@ -350,7 +369,7 @@ int main(int argc, char** argv)
     while(n.ok())
     {
         // 加速度控制
-        accelerateControl();
+        AccelerateControl();
         // 关节运动
         wpr2.JointAction();
         // 读取底盘电路返回数据

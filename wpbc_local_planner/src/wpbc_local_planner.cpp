@@ -40,6 +40,11 @@
 #include <tf_conversions/tf_eigen.h>
 #include <pluginlib/class_list_macros.h>
 #include <wpbc_local_planner/CLidarAC.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <tf/tf.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
 
 // register this planner as a WpbcLocalPlanner plugin
 PLUGINLIB_EXPORT_CLASS( wpbc_local_planner::WpbcLocalPlanner, nav_core::BaseLocalPlanner)
@@ -51,390 +56,160 @@ namespace wpbc_local_planner
 {
     WpbcLocalPlanner::WpbcLocalPlanner()
     {
-        //ROS_WARN("[WPBC]WpbcLocalPlanner() ");
-        InitHelper();
-        m_costmap_ros = NULL;
-        m_tf_listener = NULL; 
-        m_goal_reached = false;
-        m_bInitialized = false;
-        m_bAC = false;
-        m_bFirstStep = true;
+        setlocale(LC_ALL,"");
     }
-
     WpbcLocalPlanner::~WpbcLocalPlanner()
-    {
-    }
+    {}
 
+    tf::TransformListener* tf_listener_;
+    costmap_2d::Costmap2DROS* costmap_ros_;
     void WpbcLocalPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
     {
-        ROS_WARN("WpbcLocalPlanner::initialize() ");
-        if(!m_bInitialized)
-        {	
-            m_tf_listener = new tf::TransformListener;
-            m_costmap_ros = costmap_ros;
-            m_costmap = m_costmap_ros->getCostmap();
-            
-            m_global_frame_id = m_costmap_ros->getGlobalFrameID();      //"odom"
-            m_robot_base_frame_id = m_costmap_ros->getBaseFrameID();    //"base_footprint"
-            
-            m_footprint_spec = m_costmap_ros->getRobotFootprint();
-            costmap_2d::calculateMinAndMaxDistances(m_footprint_spec, m_robot_inscribed_radius, m_robot_circumscribed_radius); 
-
-            ros::NodeHandle nh_planner("~/" + name);
-            nh_planner.param("max_vel_trans", m_max_vel_trans, 0.3);
-            nh_planner.param("max_vel_rot", m_max_vel_rot, 0.9);
-            nh_planner.param("acc_scale_trans", m_acc_scale_trans, 1.5);
-            nh_planner.param("acc_scale_rot", m_acc_scale_rot, 0.3);
-            nh_planner.param("goal_dist_tolerance", m_goal_dist_tolerance, 0.1);
-            nh_planner.param("goal_yaw_tolerance", m_goal_yaw_tolerance, 0.1);
-            nh_planner.param("scan_topic", m_scan_topic, std::string("/scan"));
-
-            m_pub_target = nh_planner.advertise<geometry_msgs::PoseStamped>("local_planner_target", 10);
-            m_scan_sub = nh_planner.subscribe<sensor_msgs::LaserScan>(m_scan_topic,1,&WpbcLocalPlanner::lidarCallback,this);
-            
-            m_bInitialized = true;
-
-            ROS_DEBUG("wpbc_local_planner plugin initialized.");
-        }
-        else
-        {
-            ROS_WARN("wpbc_local_planner has already been initialized, doing nothing.");
-        }
-    }
-    
-    static double fScaleD2R = 3.14159 / 180;
-    void WpbcLocalPlanner::lidarCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
-    {
-        int nNum =scan->ranges.size();
-        if(nLidarPointNum != nNum)
-        {
-            nLidarPointNum = nNum;
-            ResetNum(nNum);
-        }
-        for(int i=0;i<nNum;i++)
-        {
-            ranges[i] = scan->ranges[i];
-        }
+        tf_listener_ = new tf::TransformListener();
+        costmap_ros_ = costmap_ros;
     }
 
+    std::vector<geometry_msgs::PoseStamped> global_plan_;
+    int target_index_;
+    bool pose_adjusting_;
+    bool goal_reached_;
     bool WpbcLocalPlanner::setPlan(const std::vector<geometry_msgs::PoseStamped>& plan)
     {
-        // ROS_WARN("[WPBC]setPlan() ");
-        if(!m_bInitialized)
-        {
-            ROS_ERROR("wpbc_local_planner has not been initialized, please call initialize() before using this planner");
-            return false;
-        }
-
-        for(int i=0;i<nLidarPointNum;i++)
-        {
-            ranges[i] = 0;
-        }
-
-        m_global_plan.clear();
-        m_global_plan = plan;
-        m_nPathIndex = 0;
-
-        m_goal_reached = false;
-        m_nStep = WPB_STEP_GOTO;
-        m_bFirstStep = true;
-        
+        target_index_ = 0;
+        global_plan_ = plan;
+        pose_adjusting_ = false;
+        goal_reached_ = false;
         return true;
-    }
-
-    static double CalDirectAngle(double inFromX, double inFromY, double inToX, double inToY)
-    {
-        double res = 0;
-        double dx = inFromX - inToX;
-        double dy = -(inFromY - inToY);
-        if (dx == 0)
-        {
-            if (dy > 0)
-            {
-                res = 180 - 90;
-            }
-            else
-            {
-                res = 0 - 90;
-            }
-        }
-        else
-        {
-            double fTan = dy / dx;
-            res = atan(fTan) * 180 / 3.1415926;
-
-            if (dx < 0)
-            {
-                res = res - 180;
-            }
-        }
-        res = 180 - res;
-        if (res < 0)
-        {
-            res += 360;
-        }
-        if (res > 360)
-        {
-            res -= 360;
-        }
-        res = res*3.1415926/180;
-        return res;
-    }
-
-    static double AngleFix(double inAngle, double inMin, double inMax)
-    {
-        if (inMax - inMin > 6.28)
-        {
-            return inAngle;
-        }
-        
-        double retAngle = inAngle;
-        while (retAngle < inMin)
-        {
-            retAngle += 6.28;
-        }
-        while (retAngle > inMax)
-        {
-            retAngle -= 6.28;
-        }
-        return retAngle;
     }
 
     bool WpbcLocalPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     {
-        // ROS_WARN("[WPBC]computeVelocityCommands() ");
-        if(!m_bInitialized)
-        {
-            ROS_ERROR("wpbc_local_planner has not been initialized, please call initialize() before using this planner");
-            return false;
-        }
+        // 获取代价地图的数据
+        costmap_2d::Costmap2D* costmap = costmap_ros_->getCostmap();
+        unsigned char* map_data = costmap->getCharMap();
+        unsigned int size_x = costmap->getSizeInCellsX();
+        unsigned int size_y = costmap->getSizeInCellsY();
 
-        int path_num = m_global_plan.size();
-        if(path_num == 0)
+        // 使用 OpenCV 绘制代价地图
+        cv::Mat map_image(size_y, size_x, CV_8UC3, cv::Scalar(128, 128, 128));
+        for (unsigned int y = 0; y < size_y; y++)
         {
-            return false;
-        }
-
-        cmd_vel.linear.x = 0;
-        cmd_vel.linear.y = 0;
-        cmd_vel.angular.z = 0;
-        bool res = true;
-
-        if(m_bFirstStep == true)
-        {
-            double target_x, target_y, target_th;
-            while(m_nPathIndex < path_num-1)
+            for (unsigned int x = 0; x < size_x; x++)
             {
-                getTransformedPosition(m_global_plan[m_nPathIndex], m_robot_base_frame_id, target_x, target_y, target_th);
-                if(sqrt(target_x*target_x + target_y*target_y) < m_goal_dist_tolerance)
-                {
-                    m_nPathIndex ++;
-                    //ROS_WARN("[WPB-GOTO]target = %d ",m_nPathIndex);
-                }
+                int map_index = y * size_x + x;
+                unsigned char cost = map_data[map_index];               // 从代价地图数据取值
+                cv::Vec3b& pixel = map_image.at<cv::Vec3b>(map_index);  // 获取彩图对应像素地址
+                
+                if (cost == 0)          // 可通行区域
+                    pixel = cv::Vec3b(128, 128, 128); // 灰色
+                else if (cost == 254)   // 障碍物
+                    pixel = cv::Vec3b(0, 0, 0);       // 黑色
+                else if (cost == 253)   // 禁行区域 
+                    pixel = cv::Vec3b(255, 255, 0);   // 浅蓝色
                 else
                 {
-                    break;  //target is far enough
+                    // 根据灰度值显示从红色到蓝色的渐变
+                    unsigned char blue = 255 - cost;
+                    unsigned char red = cost;
+                    pixel = cv::Vec3b(blue, 0, red);
                 }
             }
+        }
 
-            double face_target = CalDirectAngle(0, 0, target_x, target_y);
-            face_target = AngleFix(face_target,-2.1,2.1);
-            if(fabs(face_target)> 0.09)
+        // 在代价地图上遍历导航路径点
+        for(int i=0;i<global_plan_.size();i++)
+        {
+            geometry_msgs::PoseStamped pose_odom;
+            global_plan_[i].header.stamp = ros::Time(0);
+            tf_listener_->transformPose("odom",global_plan_[i],pose_odom);
+            double odom_x = pose_odom.pose.position.x;
+            double odom_y = pose_odom.pose.position.y;
+
+            double origin_x = costmap->getOriginX();
+            double origin_y = costmap->getOriginY();
+            double local_x = odom_x - origin_x;
+            double local_y = odom_y - origin_y;
+            int x = local_x / costmap->getResolution();
+            int y = local_y / costmap->getResolution();
+
+            // 检测前方路径点是否在禁行区域或者障碍物里
+            if(i >= target_index_ && i < target_index_ + 10)
             {
-                //turn in place
-                cmd_vel.linear.x = 0;
-                cmd_vel.linear.y = 0;
-                cmd_vel.angular.z = face_target * m_acc_scale_rot;
-                if(cmd_vel.angular.z > 0) cmd_vel.angular.z +=0.2;
-                if(cmd_vel.angular.z < 0) cmd_vel.angular.z -=0.2;
-            }
-            else
-            {
-                m_bFirstStep = false;
+                int map_index = y * size_x + x;
+                unsigned char cost = map_data[map_index];
+                if(cost >= 253)
+                    return false;
             }
         }
-        
-        if(m_nStep == WPB_STEP_ARRIVED)
+
+        // 翻转地图
+        cv::Mat flipped_image(size_x, size_y, CV_8UC3, cv::Scalar(128, 128, 128));
+        for (unsigned int y = 0; y < size_y; ++y)
         {
-            ROS_WARN("[WPBC_ARRIVED](%.2f %.2f):%.2f",cmd_vel.linear.x,cmd_vel.linear.y,cmd_vel.angular.z);
+            for (unsigned int x = 0; x < size_x; ++x)
+            {
+                cv::Vec3b& pixel = map_image.at<cv::Vec3b>(y, x);
+                flipped_image.at<cv::Vec3b>((size_x - 1 - x), (size_y - 1 - y)) = pixel;
+            }
+        }
+        map_image = flipped_image;
+
+        int final_index = global_plan_.size()-1;
+        geometry_msgs::PoseStamped pose_final;
+        global_plan_[final_index].header.stamp = ros::Time(0);
+        tf_listener_->transformPose("base_link",global_plan_[final_index],pose_final);
+        if(pose_adjusting_ == false)
+        {
+            double dx = pose_final.pose.position.x;
+            double dy = pose_final.pose.position.y;
+            double dist = std::sqrt(dx*dx + dy*dy);
+            if(dist < 0.05)
+                pose_adjusting_ = true;
+        }
+        if(pose_adjusting_ == true)
+        {
+            double final_yaw = tf::getYaw(pose_final.pose.orientation);
+            cmd_vel.linear.x = pose_final.pose.position.x * 1.5;
+            cmd_vel.angular.z = final_yaw * 0.5;
+            if(abs(final_yaw) < 0.1)
+            {
+                goal_reached_ = true;
+                cmd_vel.linear.x = 0;
+                cmd_vel.angular.z = 0;
+            }
             return true;
         }
 
-        double goal_x,goal_y,goal_th;
-        getTransformedPosition(m_global_plan.back(), m_robot_base_frame_id, goal_x, goal_y, goal_th);
-        
-        if(m_nStep == WPB_STEP_GOTO)
+        geometry_msgs::PoseStamped target_pose;
+        for(int i=target_index_;i<global_plan_.size();i++)
         {
-            // check if global goal is near
-            double goal_dist = sqrt(goal_x*goal_x + goal_y*goal_y);
-            if(goal_dist < m_goal_dist_tolerance)
+            geometry_msgs::PoseStamped pose_base;
+            global_plan_[i].header.stamp = ros::Time(0);
+            tf_listener_->transformPose("base_link",global_plan_[i],pose_base);
+            double dx = pose_base.pose.position.x;
+            double dy = pose_base.pose.position.y;
+            double dist = std::sqrt(dx*dx + dy*dy);
+
+            if (dist > 0.2) 
             {
-                m_nStep = WPB_STEP_NEAR;
+                target_pose = pose_base;
+                target_index_ = i;
+                break;
             }
-            else
-            {
-                ClearObst();
-                SetRanges(ranges);
-                //check if target is near
-                double minDist = 999;
-                int nMinDistIndex = m_nPathIndex;
-                double target_x, target_y, target_th;
-                for(int i=m_nPathIndex;i<path_num;i++)
-                {
-                    getTransformedPosition(m_global_plan[i], m_robot_base_frame_id, target_x, target_y, target_th);
-                    if( ChkTarget(target_y/0.05+50,target_x/0.05+50) == true)
-                    {
-                        double tmpDist = sqrt(target_x*target_x + target_y*target_y);
-                        if(tmpDist < minDist && tmpDist >= m_goal_dist_tolerance)
-                        {
-                            nMinDistIndex = i;
-                            minDist = tmpDist;
-                        }
-                    }
-                }
-                m_nPathIndex = nMinDistIndex;
 
-                double gpath_x, gpath_y, gpath_th;
-                ClearTarget();
-                for(int i=m_nPathIndex;i<path_num;i++)
-                {
-                    getTransformedPosition(m_global_plan[i], m_robot_base_frame_id, gpath_x, gpath_y, gpath_th);
-                    if(i == m_nPathIndex)
-                    {
-                        SetTarget(gpath_y/0.05+50,gpath_x/0.05+50,true);
-                    }
-                    else
-                    {
-                        SetTarget(gpath_y/0.05+50,gpath_x/0.05+50,false);
-                    }
-                }
-                res = OutLine();
-                // if(res == false)
-                // {
-                //     cmd_vel.linear.x = 0;
-                //     cmd_vel.linear.y = 0;
-                //     cmd_vel.angular.z = 0;
-                //     return true;
-                // }
-                if(GetHelperNum() > 5 && (path_num - m_nPathIndex) > 1)
-                {
-                    target_x = GetFixX();
-                    target_y = GetFixY();
-                    gpath_x = GetFaceX();
-                    gpath_y = GetFaceY();
-                }
-                else
-                {
-                    getTransformedPosition(m_global_plan[m_nPathIndex], m_robot_base_frame_id, target_x, target_y, target_th);
-                    int nFaceIndex = m_nPathIndex;
-                    double face_x,face_y,face_th;
-                    face_x = target_x;
-                    face_y = target_y;
-                    while(nFaceIndex < path_num)
-                    {
-                        getTransformedPosition(m_global_plan[nFaceIndex], m_robot_base_frame_id, face_x,face_y,face_th);
-                        double tmpDist = sqrt(face_x*face_x + face_y*face_y);
-                        if(tmpDist > 0.2)
-                        {
-                            break;
-                        }
-                        nFaceIndex ++;
-                    }
-                    gpath_x = face_x;
-                    gpath_y = face_y;
-                    gpath_th = face_th;
-
-                    //getTransformedPosition(m_global_plan[m_nPathIndex], m_robot_base_frame_id, gpath_x, gpath_y, gpath_th);
-                }
- 
-                //double face_target = CalDirectAngle(0, 0, gpath_x, gpath_y);
-                double face_target = 0;
-                if((target_x !=gpath_x) || (target_y !=gpath_y) )
-                {
-                    face_target =CalDirectAngle(target_x, target_y, gpath_x, gpath_y);
-                }
-                else
-                {
-                    face_target = CalDirectAngle(0, 0, gpath_x, gpath_y);
-                }
-                face_target = AngleFix(face_target,-2.1,2.1);
-                if(fabs(face_target)> 0.8)
-                {
-                    // turn in place
-                    cmd_vel.linear.x = 0;
-                    cmd_vel.linear.y = 0;
-                    cmd_vel.angular.z = face_target * m_acc_scale_rot;
-                    if(cmd_vel.angular.z > 0) cmd_vel.angular.z +=0.2;
-                    if(cmd_vel.angular.z < 0) cmd_vel.angular.z -=0.2;
-                }
-                else
-                {
-                    // start to move
-                    cmd_vel.linear.x = target_x * m_acc_scale_trans;
-                    cmd_vel.linear.y = target_y * m_acc_scale_trans;
-                    cmd_vel.angular.z = face_target * m_acc_scale_rot;
-                }
-
-                if(cmd_vel.linear.x > 0) cmd_vel.linear.x+=0.05;
-                if(cmd_vel.linear.x < 0) cmd_vel.linear.x-=0.05;
-                if(cmd_vel.linear.y > 0) cmd_vel.linear.y+=0.02;
-                if(cmd_vel.linear.y < 0) cmd_vel.linear.y-=0.02;
-
-                m_pub_target.publish(m_global_plan[m_nPathIndex]);
-            }
+            if(i == global_plan_.size()-1)
+                target_pose = pose_base; 
         }
-
-        if(m_nStep == WPB_STEP_NEAR)
-        {
-            
-            cmd_vel.linear.x = 0;
-            cmd_vel.linear.y = 0;
-            cmd_vel.angular.z = goal_th;
-
-            if(fabs(goal_th) < m_goal_yaw_tolerance)
-            {
-                m_goal_reached = true;
-                m_nStep = WPB_STEP_ARRIVED;
-                cmd_vel.angular.z = 0;
-                //ROS_WARN("[WPB-ARRIVED] goal (%.2f,%.2f) %.2f",goal_x, goal_y, goal_th);
-            }
-            m_pub_target.publish(m_global_plan.back());
-        }
-
-        if(cmd_vel.linear.x > m_max_vel_trans) cmd_vel.linear.x = m_max_vel_trans;
-        if(cmd_vel.linear.x < -m_max_vel_trans) cmd_vel.linear.x = -m_max_vel_trans;
-        if(cmd_vel.linear.y > m_max_vel_trans) cmd_vel.linear.y = m_max_vel_trans;
-        if(cmd_vel.linear.y < -m_max_vel_trans) cmd_vel.linear.y = -m_max_vel_trans;
-        if(cmd_vel.angular.z > m_max_vel_rot) cmd_vel.angular.z = m_max_vel_rot;
-        if(cmd_vel.angular.z < -m_max_vel_rot) cmd_vel.angular.z = -m_max_vel_rot;
-
-        m_last_cmd = cmd_vel;
-
-        //ROS_INFO("vel( %.2f , %.2f ) :   %.2f",cmd_vel.linear.x,cmd_vel.linear.y,cmd_vel.angular.z);
+        cmd_vel.linear.x = target_pose.pose.position.x * 1.5;
+        if(cmd_vel.linear.x < 0)
+            cmd_vel.linear.x =0;
+        cmd_vel.angular.z = target_pose.pose.position.y * 5.0;
         
         return true;
     }
-
-
     bool WpbcLocalPlanner::isGoalReached()
     {
-        //ROS_WARN("[WPBC]isGoalReached() ");
-        if (m_goal_reached)
-        {
-            ROS_INFO("GOAL Reached!");
-            return true;
-        }
-        return false;
-    }
-
-    void WpbcLocalPlanner::getTransformedPosition(geometry_msgs::PoseStamped& pose, std::string& frame_id, double& x, double& y, double& theta)
-    {
-        geometry_msgs::PoseStamped tf_pose;
-        pose.header.stamp = ros::Time(0);
-        m_tf_listener->transformPose(frame_id, pose, tf_pose);
-        x = tf_pose.pose.position.x;
-        y = tf_pose.pose.position.y,
-        theta = tf::getYaw(tf_pose.pose.orientation);
+        return goal_reached_;
     }
 
 }
