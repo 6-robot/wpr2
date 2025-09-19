@@ -65,12 +65,12 @@ void init()
     a_left_name[4] = "left_joint_5";
     a_left_name[5] = "left_joint_6";
 
-    a_left_position[0] = 0.12;
-    a_left_position[1] = 1.4;
-    a_left_position[2] = -0.5;
-    a_left_position[3] = -0.6;
-    a_left_position[4] = 0.15;
-    a_left_position[5] = -0.5;
+    a_left_position[0] = 0.5;
+    a_left_position[1] = -1.57;
+    a_left_position[2] = 0;
+    a_left_position[3] = -1.16;
+    a_left_position[4] = 0;
+    a_left_position[5] = 0;
 
     a_right_name[0] = "right_joint_1";
     a_right_name[1] = "right_joint_2";
@@ -79,12 +79,12 @@ void init()
     a_right_name[4] = "right_joint_5";
     a_right_name[5] = "right_joint_6";
 
-    a_right_position[0] = -0.1;
-    a_right_position[1] = -1.4;
-    a_right_position[2] = 0.3;
-    a_right_position[3] = 0.3;
-    a_right_position[4] = -0.5;
-    a_right_position[5] = 0.5;
+    a_right_position[0] = -0.5;
+    a_right_position[1] = 1.57;
+    a_right_position[2] = 0.0;
+    a_right_position[3] = 1.16;
+    a_right_position[4] = 0;
+    a_right_position[5] = 0;
 
     // 第二组动作
     b_left_name[0] = "left_joint_1";
@@ -95,11 +95,11 @@ void init()
     b_left_name[5] = "left_joint_6";
 
     b_left_position[0] = 0.3;
-    b_left_position[1] = 1.3;
-    b_left_position[2] = -0.2;
-    b_left_position[3] = -0.8;
-    b_left_position[4] = -0.3;
-    b_left_position[5] = 0.0;
+    b_left_position[1] = -1.4;
+    b_left_position[2] = 0.1;
+    b_left_position[3] = -0.6;
+    b_left_position[4] = 0.4;
+    b_left_position[5] = -0.2;
 
     b_right_name[0] = "right_joint_1";
     b_right_name[1] = "right_joint_2";
@@ -109,11 +109,11 @@ void init()
     b_right_name[5] = "right_joint_6";
 
     b_right_position[0] = -0.3;
-    b_right_position[1] = -1.3;
-    b_right_position[2] = 0.5;
-    b_right_position[3] = 0.4;
-    b_right_position[4] = 0.7;
-    b_right_position[5] = 1.2;
+    b_right_position[1] = 1.4;
+    b_right_position[2] = -0.1;
+    b_right_position[3] = 0.6;
+    b_right_position[4] = -0.4;
+    b_right_position[5] = 0.2;
 
 }
 
@@ -122,13 +122,13 @@ static int count = 0;
 void NavResultCallback(const std_msgs::String &msg)
 {
     ROS_WARN("[NavResultCallback] %s",msg.data.c_str());
-    if(count == 1)
+    if(nState == 1)
     {
         ROS_WARN("达到 1 航点，做一个动作");
         sensor_msgs::JointState chest_msg;
         chest_msg.header.stamp = ros::Time::now();
         chest_msg.name.push_back("chest_height");
-        chest_msg.position.push_back(0.4);
+        chest_msg.position.push_back(0.65);
         chest_msg.velocity.push_back(18000);
         chest_height_pub.publish(chest_msg);
 

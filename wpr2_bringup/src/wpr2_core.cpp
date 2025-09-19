@@ -256,6 +256,33 @@ int main(int argc, char** argv)
 {
     setlocale(LC_ALL,"");
     ros::init(argc,argv,"wpr2_core");
+
+    ros::NodeHandle n_param("~");
+    // 通信端口
+    std::string strSerialPort;
+    n_param.param<std::string>("serial_port", strSerialPort, "/dev/ftdi");
+    wpr2.Open(strSerialPort.c_str(),115200);
+
+    // 是否发布imu信息
+    bool bImu;
+    n_param.param<bool>("imu_pub", bImu, false);
+    if(bImu == true)
+        ROS_WARN("[wpr2_core] 开启姿态IMU信息发布！");
+    
+    // 从参数文件读取底盘类型
+    std::string chassis_type;
+    n_param.param<std::string>("chassis_type", chassis_type, "MODE_OMNI");
+    ROS_WARN("[wpr2_core] chassis_type = %s",chassis_type.c_str());
+    if (chassis_type == "MODE_MECANUM") {
+        ROS_WARN("[wpr2_core] 底盘类型为 麦克纳姆轮");
+        wpr2.nBaseMode == MODE_MECANUM;
+    } else if (chassis_type == "MODE_OMNI") {
+        ROS_WARN("[wpr2_core] 底盘类型为 四轮全向");
+        wpr2.nBaseMode == MODE_OMNI;
+    } else {
+        ROS_WARN("[wpr2_core] 底盘类型未定义！请检查 wpr2.yaml 文件内容！");
+    }
+
     ros::NodeHandle n;
     ros::Subscriber cmd_vel_sub = n.subscribe("cmd_vel",10,&CmdVelCallback);
     ros::Subscriber left_arm_sub = n.subscribe("wpr2/left_arm",10,&LeftArmCallback);
@@ -265,16 +292,6 @@ int main(int argc, char** argv)
     ros::Subscriber chest_height_sub = n.subscribe("wpr2/chest_height",10,&ChestHeightCallback);
     ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu >("imu/data_raw", 10);
 
-    ros::NodeHandle n_param("~");
-    std::string strSerialPort;
-    n_param.param<std::string>("serial_port", strSerialPort, "/dev/ftdi");
-    wpr2.Open(strSerialPort.c_str(),115200);
-
-    bool bImu;
-    n_param.param<bool>("imu_pub", bImu, false);
-    if(bImu == true)
-        ROS_WARN("[wpr2_core] 开启姿态IMU信息发布！");
-    
     ros::Time current_time, last_time;
     current_time = ros::Time::now();
     last_time = ros::Time::now();
@@ -422,7 +439,7 @@ int main(int argc, char** argv)
             {
                 // 麦克纳姆轮里程计
                 fVx = (fPosDiff[1] - fPosDiff[0]) * fKMVx;
-                fVy = (fPosDiff[1] - fPosDiff[2]) *fKMVy;
+                fVy = (fPosDiff[1] - fPosDiff[2]) * fKMVy;
                 fVz = (fPosDiff[0] + fPosDiff[1] + fPosDiff[2] + fPosDiff[3])*fKMVz;
                 fVx = fVx/(fTimeDur);
                 fVy = fVy/(fTimeDur);
@@ -431,11 +448,11 @@ int main(int argc, char** argv)
             if(wpr2.nBaseMode == MODE_OMNI)
             {
                 fVx = (fPosDiff[1] - fPosDiff[0]) * fKOVx;
-                fVy = (fPosDiff[0] + fPosDiff[1]) - (fPosDiff[0] + fPosDiff[1] + fPosDiff[2])*fKOVy;
-                fVz = (fPosDiff[0] + fPosDiff[1] + fPosDiff[2])*fKOVz;
-                fVx = fVx/(fTimeDur*9100);
-                fVy = fVy/(fTimeDur*9100);
-                fVz = fVz/(fTimeDur*1840);
+                fVy = (fPosDiff[1] - fPosDiff[2]) * fKOVy;
+                fVz = (fPosDiff[0] + fPosDiff[1] + fPosDiff[2] + fPosDiff[3])*fKOVz;
+                fVx = fVx/(fTimeDur);
+                fVy = fVy/(fTimeDur);
+                fVz = fVz/(fTimeDur);
             }
             //ROS_WARN("[Velocity]    fVx=%.2f   fVy=%.2f    fVz=%.2f",fVx,fVy,fVz);
             // 方案二 直接把下发速度当作里程计积分依据

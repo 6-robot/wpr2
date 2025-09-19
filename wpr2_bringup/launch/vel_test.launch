@@ -1,0 +1,11 @@
+<launch>
+
+  <!-- wpr2 core-->
+  <node pkg="wpr2_bringup" type="wpr2_core" name="wpr2_core" output="screen">
+    <param name="serial_port" type="string" value="/dev/ftdi"/> 
+    <rosparam file="$(find wpr2_bringup)/config/wpr2.yaml" command="load" />
+  </node>
+  
+  <node pkg="wpr2_bringup" type="vel_panel.py" name="vel_panel"/>
+
+</launch>

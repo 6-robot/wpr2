@@ -49,7 +49,7 @@ CWPR2_driver::CWPR2_driver()
 	m_lastRecv = 0;
 	m_bFrameStart = false;
 	m_nFrameLength = 14;
-	nBaseMode = MODE_MECANUM;
+	nBaseMode = MODE_OMNI;
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -433,13 +433,13 @@ int SpeedFixed(int inValue)
 }
 
 // 麦克纳姆轮参数
-static float fKMecanumLinearMotorKX = -1830;
-static float fKMecanumLinearMotorKY = -2040;
-static float fKMecanumAngularMotorK = -760;
-// 三轮全向参数
-static float vkx = (float)sqrt(3.0f)*0.5;
-static float fKLinearMotorK = 1953.125;
-static float fKAngularMotorK = 371.875;
+static float fMecanumLinearMotorKX = 1830;
+static float fMecanumLinearMotorKY = 2040;
+static float fMecanumAngularMotorK = 760;
+// 四轮全向参数
+static float fOmniLinearMotorKX = 1830;
+static float fOmniLinearMotorKY = 2040;
+static float fOmniAngularMotorK = 760;
 void CWPR2_driver::Velocity(float inX, float inY, float inAngular)
 {
 	int nMotorToSend[4];
@@ -448,50 +448,50 @@ void CWPR2_driver::Velocity(float inX, float inY, float inAngular)
 	{
 		// 麦克纳姆轮
 		//upward backward
-		int nTmpMotorVal = inX * fKMecanumLinearMotorKX;
-		nMotorToSend[0] = -nTmpMotorVal;
-		nMotorToSend[1] = nTmpMotorVal;
-		nMotorToSend[2] = nTmpMotorVal;
-		nMotorToSend[3] = -nTmpMotorVal;
+		int nTmpMotorVal = inX * fMecanumLinearMotorKX;
+		nMotorToSend[0] = nTmpMotorVal;
+		nMotorToSend[1] = -nTmpMotorVal;
+		nMotorToSend[2] = -nTmpMotorVal;
+		nMotorToSend[3] = nTmpMotorVal;
 
 		//shif left right
-		nTmpMotorVal = inY * fKMecanumLinearMotorKY;
-		nMotorToSend[0] += nTmpMotorVal;
-		nMotorToSend[1] += nTmpMotorVal;
-		nMotorToSend[2] += -nTmpMotorVal;
-		nMotorToSend[3] += -nTmpMotorVal;
-
-		//Turning 
-		nTmpMotorVal = inAngular * fKMecanumAngularMotorK;
-		nMotorToSend[0] += nTmpMotorVal;
-		nMotorToSend[1] += nTmpMotorVal;
+		nTmpMotorVal = inY * fMecanumLinearMotorKY;
+		nMotorToSend[0] += -nTmpMotorVal;
+		nMotorToSend[1] += -nTmpMotorVal;
 		nMotorToSend[2] += nTmpMotorVal;
 		nMotorToSend[3] += nTmpMotorVal;
+
+		//Turning 
+		nTmpMotorVal = inAngular * fMecanumAngularMotorK;
+		nMotorToSend[0] += -nTmpMotorVal;
+		nMotorToSend[1] += -nTmpMotorVal;
+		nMotorToSend[2] += -nTmpMotorVal;
+		nMotorToSend[3] += -nTmpMotorVal;
 	}
 	
 	if(nBaseMode == MODE_OMNI)
 	{
-		// 三轮全向
+		// 四轮全向
 		//upward backward
-		int nVectorX = inX * fKLinearMotorK;
+		int nTmpMotorVal = inX * fOmniLinearMotorKX;
+		nMotorToSend[0] = nTmpMotorVal;
+		nMotorToSend[1] = -nTmpMotorVal;
+		nMotorToSend[2] = -nTmpMotorVal;
+		nMotorToSend[3] = nTmpMotorVal;
 
-		//shift left right
-		int nVectorY = inY * fKLinearMotorK;
+		//shif left right
+		nTmpMotorVal = inY * fOmniLinearMotorKY;
+		nMotorToSend[0] += -nTmpMotorVal;
+		nMotorToSend[1] += -nTmpMotorVal;
+		nMotorToSend[2] += nTmpMotorVal;
+		nMotorToSend[3] += nTmpMotorVal;
 
 		//Turning 
-		int nVectorTurn = inAngular * fKAngularMotorK;
-
-		//Speed Value
-		nMotorToSend[0] = 0;	//left front
-		nMotorToSend[0] = -vkx*nVectorX + nVectorY*0.5 + nVectorTurn;
-
-		nMotorToSend[1] = 0;	//right front
-		nMotorToSend[1] = vkx*nVectorX + nVectorY*0.5 + nVectorTurn;
-
-		nMotorToSend[2] = 0;	//back 
-		nMotorToSend[2] = -nVectorY + nVectorTurn;
-
-		nMotorToSend[3] = 0;	//NC
+		nTmpMotorVal = inAngular * fOmniAngularMotorK;
+		nMotorToSend[0] += -nTmpMotorVal;
+		nMotorToSend[1] += -nTmpMotorVal;
+		nMotorToSend[2] += -nTmpMotorVal;
+		nMotorToSend[3] += -nTmpMotorVal;
 	}
 
 	//printf("[CWPB_driver::Mecanum]-> [0]%d [1]%d [2]%d [3]%d \n", nMotorToSend[0], nMotorToSend[1], nMotorToSend[2], nMotorToSend[3]);
