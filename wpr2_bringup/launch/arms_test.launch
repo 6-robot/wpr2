@@ -19,7 +19,10 @@
   <!-- plan namespace -->
   <group ns="plan">
     <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
-    <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui">
+    <!-- <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui">
+      <rosparam command="load" file="$(find wpr2_bringup)/config/wpr2.yaml" />
+    </node> -->
+    <node pkg="wpr2_bringup" type="joints_panel.py" name="joints_panel" required="true">
       <rosparam command="load" file="$(find wpr2_bringup)/config/wpr2.yaml" />
     </node>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" >
@@ -31,7 +34,6 @@
   <node pkg="tf" type="static_transform_publisher" name="world_to_plan_footprint" args="0 1 0 0 0 0 /world /plan/base_footprint 100" />
   <node pkg="tf" type="static_transform_publisher" name="world_to_real_footprint" args="0 0 0 0 0 0 /world /real/base_footprint 100" />
 
-  <node pkg="wpr2_bringup" type="joints_panel.py" name="joints_panel"/>
 
   <node pkg="wpr2_bringup" type="wpr2_arms_test" name="wpr2_arms_test" output="screen"/>
 
