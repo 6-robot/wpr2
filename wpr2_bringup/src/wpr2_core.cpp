@@ -234,13 +234,13 @@ void OdomDeltaResetCallback(const std_msgs::String::ConstPtr &msg)
 }
 
 // 麦克纳姆轮里程计参数
-static double fKMVx =0.091f/(1990*2*4.5);
-static double fKMVy = 0.095f/(2200*2*4.4);
-static double fKMVz = 0.091f/(832*4*4.84);
+static double fKMVx = 1.0f/(190000);
+static double fKMVy = 1.0f/(210000);
+static double fKMVz = 1.0f/(173000);
 // 全向里程计参数
-static float fKOVx = 1.0f/sqrt(3.0f);
-static float fKOVy = 2.0f/3.0f;
-static float fKOVz = 1.0f/3.0f;
+static float fKOVx = 1.0f/(143000);
+static float fKOVy = 1.0f/(141000);
+static float fKOVz = 1.0f/(119000);
 
 static float fSumX =0;
 static float fSumY =0;
@@ -275,10 +275,10 @@ int main(int argc, char** argv)
     ROS_WARN("[wpr2_core] chassis_type = %s",chassis_type.c_str());
     if (chassis_type == "MODE_MECANUM") {
         ROS_WARN("[wpr2_core] 底盘类型为 麦克纳姆轮");
-        wpr2.nBaseMode == MODE_MECANUM;
+        wpr2.nBaseMode = MODE_MECANUM;
     } else if (chassis_type == "MODE_OMNI") {
         ROS_WARN("[wpr2_core] 底盘类型为 四轮全向");
-        wpr2.nBaseMode == MODE_OMNI;
+        wpr2.nBaseMode = MODE_OMNI;
     } else {
         ROS_WARN("[wpr2_core] 底盘类型未定义！请检查 wpr2.yaml 文件内容！");
     }

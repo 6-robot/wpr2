@@ -433,13 +433,13 @@ int SpeedFixed(int inValue)
 }
 
 // 麦克纳姆轮参数
-static float fMecanumLinearMotorKX = 1830;
-static float fMecanumLinearMotorKY = 2040;
-static float fMecanumAngularMotorK = 760;
+static float fMecanumLinearMotorKX = 1890;
+static float fMecanumLinearMotorKY = 2130;
+static float fMecanumAngularMotorK = 765;
 // 四轮全向参数
-static float fOmniLinearMotorKX = 1830;
-static float fOmniLinearMotorKY = 2040;
-static float fOmniAngularMotorK = 760;
+static float fOmniLinearMotorKX = 1415;
+static float fOmniLinearMotorKY = 1415;
+static float fOmniAngularMotorK = 528;
 void CWPR2_driver::Velocity(float inX, float inY, float inAngular)
 {
 	int nMotorToSend[4];
