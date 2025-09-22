@@ -8,5 +8,5 @@ sudo apt install -y ros-$ROS_DISTRO-cv-bridge
 sudo apt install -y ros-$ROS_DISTRO-audio-common
 sudo apt install -y ros-$ROS_DISTRO-controller-manager
 sudo apt install -y ros-$ROS_DISTRO-rplidar-ros
-sudo apt install -y ros-$ROS_DISTRO-velocity-controllers
+sudo apt install -y ros-$ROS_DISTRO-moveit
 sudo apt install -y python3-pyqt5

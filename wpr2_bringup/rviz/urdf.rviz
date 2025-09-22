@@ -4,9 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /RobotModel1
         - /RobotModel1/Links1
-        - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 1079
@@ -200,6 +198,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        left_tcp_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         right_link_0:
           Alpha: 1
           Show Axes: false
@@ -239,6 +241,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        right_tcp_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -246,72 +252,12 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: false
-        back_left_foot_link:
-          Value: false
-        back_left_wheel_link:
-          Value: false
-        back_right_foot_link:
-          Value: false
-        back_right_wheel_link:
-          Value: false
-        base_footprint:
-          Value: false
-        base_link:
-          Value: false
-        camera_link:
-          Value: false
-        chest_link:
-          Value: false
-        femto_base:
-          Value: false
-        front_left_foot_link:
-          Value: false
-        front_left_wheel_link:
-          Value: false
-        front_right_foot_link:
-          Value: false
-        front_right_wheel_link:
-          Value: false
-        laser:
-          Value: false
-        left_link_0:
-          Value: false
-        left_link_1:
-          Value: false
-        left_link_2:
-          Value: false
-        left_link_3:
-          Value: false
-        left_link_4:
-          Value: false
-        left_link_5:
-          Value: false
-        left_link_6:
-          Value: false
-        left_link_finger:
-          Value: false
-        right_link_0:
-          Value: false
-        right_link_1:
-          Value: false
-        right_link_2:
-          Value: false
-        right_link_3:
-          Value: false
-        right_link_4:
-          Value: false
-        right_link_5:
-          Value: false
-        right_link_6:
-          Value: false
-        right_link_finger:
-          Value: false
+        All Enabled: true
       Marker Alpha: 0.5
       Marker Scale: 0.5
       Name: TF
@@ -319,50 +265,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_footprint:
-          base_link:
-            back_left_foot_link:
-              {}
-            back_left_wheel_link:
-              {}
-            back_right_foot_link:
-              {}
-            back_right_wheel_link:
-              {}
-            chest_link:
-              femto_base:
-                camera_link:
-                  {}
-              left_link_0:
-                left_link_1:
-                  left_link_2:
-                    left_link_3:
-                      left_link_4:
-                        left_link_5:
-                          left_link_6:
-                            left_link_finger:
-                              {}
-              right_link_0:
-                right_link_1:
-                  right_link_2:
-                    right_link_3:
-                      right_link_4:
-                        right_link_5:
-                          right_link_6:
-                            right_link_finger:
-                              {}
-            front_left_foot_link:
-              {}
-            front_left_wheel_link:
-              {}
-            front_right_foot_link:
-              {}
-            front_right_wheel_link:
-              {}
-            laser:
-              {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:

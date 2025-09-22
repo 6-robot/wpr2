@@ -1,0 +1,8 @@
+<launch>
+    <!-- 设置控制器配置文件的路径 -->
+    <rosparam file="$(find wpr2_moveit_config)/config/wpr2_controllers.yaml"/>
+
+    <!-- 加载MoveIt的简单控制器管理器插件 -->
+    <param name="use_controller_manager" value="true"/>
+    <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
+</launch>

@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- wpr2 core-->
+  <node pkg="wpr2_bringup" type="wpr2_core" name="wpr2_core" output="screen">
+    <param name="serial_port" type="string" value="/dev/ftdi"/> 
+    <rosparam file="$(find wpr2_bringup)/config/wpr2.yaml" command="load" />
+  </node>
+  
+  <!-- grab_right -->
+  <node pkg="wpr2_behaviors" type="wpr2_grab_right" name="wpr2_grab_right" output="screen" />
+
+</launch>

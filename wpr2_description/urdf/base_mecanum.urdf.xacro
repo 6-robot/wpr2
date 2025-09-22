@@ -3,6 +3,9 @@
   <xacro:property name="M_PI" value="3.1415926535897931"/>
   <xacro:property name="length" value="0.395"/>
   <xacro:property name="width" value="0.37"/>
+  <material name="black">
+    <color rgba="0 0 0 1"/>
+  </material>
 
   <!-- base_footprint -->
   <link name="base_footprint">
@@ -23,15 +26,44 @@
   <!-- base_link -->
   <link name="base_link">
       <visual>
-          <geometry>
-              <mesh filename="package://wpr2_description/meshes/base.dae" scale="1 1 1"/>
-          </geometry>
+        <geometry>
+            <mesh filename="package://wpr2_description/meshes/base.dae" scale="1 1 1"/>
+        </geometry>
         <origin rpy = "0 0 0" xyz = "0.0 0.0 0.13"/>
       </visual>
-      <collision>
-        <origin xyz="0.005 0 0.05" rpy="0 0 0" />
+      <visual>
         <geometry>
-          <box size="0.57 0.37 0.1"/>
+            <box size="0.02 0.32 0.2"/>
+        </geometry>
+        <origin rpy = "0 0 0" xyz = "-0.13 0.0 1.0"/>
+        <material name="black" />
+      </visual>
+      <!-- 底盘碰撞体 -->
+      <collision>
+        <origin xyz="0.005 0 0.07" rpy="0 0 0" />
+        <geometry>
+          <box size="0.57 0.46 0.12"/>
+        </geometry>
+      </collision>
+      <!-- 上舱盖 -->
+      <collision>
+        <origin xyz="-0.03 0 0.20" rpy="0 0 0" />
+        <geometry>
+          <box size="0.50 0.37 0.04"/>
+        </geometry>
+      </collision>
+      <!-- 立柱 -->
+      <collision>
+        <origin xyz="-0.07 0 0.68" rpy="0 0 0" />
+        <geometry>
+          <box size="0.10 0.20 0.90"/>
+        </geometry>
+      </collision>
+      <!-- 屏幕 -->
+      <collision>
+        <origin rpy = "0 0 0" xyz = "-0.13 0.0 1.0"/>
+        <geometry>
+            <box size="0.02 0.32 0.2"/>
         </geometry>
       </collision>
       <inertial>

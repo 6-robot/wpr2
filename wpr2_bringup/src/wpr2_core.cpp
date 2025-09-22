@@ -67,6 +67,8 @@ static int arRightArmSpeed[6];
 static int nRightGripperPos;
 static int nRightGripperSpeed;
 
+bool bJointAction = false;
+
 void AccelerateControl()
 {
     // 定义一个足够小的数，用于浮点数比较
@@ -165,11 +167,12 @@ void LeftArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
     if(nNumJoint > 6) nNumJoint = 6;
     for(int i=0;i<nNumJoint;i++)
     {
-        ROS_WARN("[LeftArm 接收] msg->position[%d] = (%.2f)",i, msg->position[i]);
+        // ROS_INFO("[LeftArm 接收] msg->position[%d] = (%.2f)",i, msg->position[i]);
         arLeftArmPos[i] = msg->position[i] * kAngleToDegree;
         arLeftArmSpeed[i] = msg->velocity[i];
     }
     wpr2.SetLeftArm(arLeftArmPos,arLeftArmSpeed);
+    bJointAction = true;
 }
 
 void LeftGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
@@ -178,7 +181,8 @@ void LeftGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
     nLeftGripperPos = GripperPosition(msg->position[0]);
     nLeftGripperSpeed = msg->velocity[0];
     wpr2.SetLeftGripper(nLeftGripperPos,nLeftGripperSpeed);
-    ROS_WARN("[LeftGripper] 左手爪 = %d", nLeftGripperPos);
+    // ROS_INFO("[LeftGripper] 左手爪 = %d", nLeftGripperPos);
+    bJointAction = true;
 }
 
 void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
@@ -188,11 +192,12 @@ void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
     if(nNumJoint > 6) nNumJoint = 6;
     for(int i=0;i<nNumJoint;i++)
     {
-        ROS_WARN("[RightArm 接收] msg->position[%d] = (%.2f)",i, msg->position[i]);
+        // ROS_INFO("[RightArm 接收] msg->position[%d] = (%.2f)",i, msg->position[i]);
         arRightArmPos[i] = msg->position[i] * kAngleToDegree;
         arRightArmSpeed[i] = msg->velocity[i];
     }
     wpr2.SetRightArm(arRightArmPos,arRightArmSpeed);
+    bJointAction = true;
 }
 
 void RightGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
@@ -201,7 +206,8 @@ void RightGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
     nRightGripperPos = GripperPosition(msg->position[0]);
     nRightGripperSpeed = msg->velocity[0];
     wpr2.SetRightGripper(nRightGripperPos,nRightGripperSpeed);
-    ROS_WARN("[RightGripper] 右手爪 = %d", nRightGripperPos);
+    // ROS_INFO("[RightGripper] 右手爪 = %d", nRightGripperPos);
+    bJointAction = true;
 }
 
 void ChestHeightCallback(const sensor_msgs::JointState::ConstPtr& msg)
@@ -214,8 +220,9 @@ void ChestHeightCallback(const sensor_msgs::JointState::ConstPtr& msg)
         if(nTorsoHeight < 0) nTorsoHeight = 0;
         if(nTorsoHeight > 700000) nTorsoHeight = 700000;
         int nTorsoSpeed = msg->velocity[0];
-        ROS_WARN("[ChestHeight 接收] msg->position[0] = (%.2f)",msg->position[0]);
+        // ROS_WARN("[ChestHeight 接收] msg->position[0] = (%.2f)",msg->position[0]);
         wpr2.SetTorsoHeight(nTorsoHeight,nTorsoSpeed);
+        bJointAction = true;
     }
 }
 
@@ -290,7 +297,8 @@ int main(int argc, char** argv)
     ros::Subscriber right_arm_sub = n.subscribe("wpr2/right_arm",10,&RightArmCallback);
     ros::Subscriber right_gripper_sub = n.subscribe("wpr2/right_gripper",10,&RightGripperCallback);
     ros::Subscriber chest_height_sub = n.subscribe("wpr2/chest_height",10,&ChestHeightCallback);
-    ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu >("imu/data_raw", 10);
+    ros::Publisher joints_result_pub = n.advertise<std_msgs::String>("wpr2/joints_result", 10);
+    ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu>("imu/data_raw", 10);
 
     ros::Time current_time, last_time;
     current_time = ros::Time::now();
@@ -571,6 +579,18 @@ int main(int argc, char** argv)
         joint_msg.position = joint_pos;
         joint_state_pub.publish(joint_msg);
         // ROS_WARN("Joint pos pub");
+
+        if(bJointAction == true)
+        {
+            bool res = wpr2.JointsArrived();
+            if(res == true)
+            {
+                std_msgs::String joints_res_msg;
+                joints_res_msg.data = "done";
+                joints_result_pub.publish(joints_res_msg);
+                bJointAction = false;
+            }
+        }
 
         ros::spinOnce();
         r.sleep();
