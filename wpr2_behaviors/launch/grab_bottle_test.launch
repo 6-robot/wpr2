@@ -1,0 +1,44 @@
+<launch>
+  <!-- 定义可以从外部传入的参数 -->
+  <arg name="image_topic" default="/camera/color/image_raw" />
+  <arg name="model_name" default="yolov8n.pt" />
+  <arg name="display_image" default="false" />
+  <arg name="rvizconfig" default="$(find wp_yolo)/rviz/object.rviz" />
+
+  <!-- 启动YOLO检测节点 -->
+  <node name="yolo_detector" pkg="wp_yolo" type="yolo_detector.py" >
+      <!-- 将arg传入的参数设置为节点的私有参数 -->
+      <param name="image_topic" value="$(arg image_topic)" />
+      <param name="model_path" value="$(find wp_yolo)/models/$(arg model_name)" />
+      <param name="display_image" value="$(arg display_image)" />
+  </node>
+  <!-- 启动 检测结果可视化节点 (C++) -->
+  <node name="detection_visualizer" pkg="wp_yolo" type="detection_visualizer_node" output="screen" />
+
+  <!-- 机器人tf -->
+  <arg name="model" default="$(find wpr2_description)/urdf/wpr2.urdf.xacro"/>
+
+  <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
+  <!-- 
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
+      <rosparam command="load" file="$(find wpr2_bringup)/config/wpr2.yaml" />
+  </node> -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+  <include file="$(find wpr2_bringup)/launch/include/start_femto_bolt.launch" />
+    
+  <!-- wpr2 core-->
+  <node pkg="wpr2_bringup" type="wpr2_core" name="wpr2_core" output="screen">
+    <param name="serial_port" type="string" value="/dev/ftdi"/> 
+    <rosparam file="$(find wpr2_bringup)/config/wpr2.yaml" command="load" />
+  </node>
+  
+  <!-- grab_right -->
+  <node pkg="wpr2_behaviors" type="wpr2_grab_right" name="wpr2_grab_right" output="screen" />
+
+  <node pkg="wpr2_behaviors" type="wpr2_grab_bottle" name="wpr2_grab_bottle" output="screen" />
+
+</launch>
