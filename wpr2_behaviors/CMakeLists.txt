@@ -221,3 +221,11 @@ add_dependencies(wpr2_grab_bottle ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 target_link_libraries(wpr2_grab_bottle
   ${catkin_LIBRARIES}
 )
+
+add_executable(wpr2_grab_bottle_2
+  src/wpr2_grab_bottle_2.cpp
+)
+add_dependencies(wpr2_grab_bottle_2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(wpr2_grab_bottle_2
+  ${catkin_LIBRARIES}
+)

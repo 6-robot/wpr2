@@ -11,7 +11,7 @@
     <param name="image_topic" value="$(arg image_topic)" />
     <param name="model_path" value="$(find wp_yolo)/models/$(arg model_name)" />
     <param name="display_image" value="$(arg display_image)" />
-    <param name="detection_active" value="true" />
+    <param name="detection_active" value="false" />
   </node>
   <!-- 启动 检测结果可视化节点 (C++) -->
   <node name="detection_visualizer" pkg="wp_yolo" type="detection_visualizer_node" output="screen" >
@@ -40,7 +40,7 @@
   </node>
   
   <!-- grab_right -->
-  <node pkg="wpr2_behaviors" type="wpr2_grab_right" name="wpr2_grab_right" output="screen" />
+  <!-- <node pkg="wpr2_behaviors" type="wpr2_grab_right" name="wpr2_grab_right" output="screen" /> -->
 
   <node pkg="wpr2_behaviors" type="wpr2_grab_bottle" name="wpr2_grab_bottle" output="screen" />
 

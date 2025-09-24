@@ -50,6 +50,7 @@
 #define STEP_REACH          3
 #define STEP_GRAB           4
 #define STEP_OBJ_UP         5
+#define STEP_HAND_BACK      6
 #define STEP_DONE           7
 static int nStep = STEP_WAIT;
 
@@ -125,9 +126,9 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
 
-    arm_ctrl_pub = nh.advertise<sensor_msgs::JointState>("wpr2/right_arm", 10);
-    gripper_ctrl_pub = nh.advertise<sensor_msgs::JointState>("wpr2/right_gripper", 10);
-    grab_result_pub = nh.advertise<std_msgs::String>("/wpr2/grab_result", 10);
+    arm_ctrl_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_arm", 10);
+    gripper_ctrl_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_gripper", 10);
+    grab_result_pub = nh.advertise<std_msgs::String>("/wpr2/right_result", 10);
 
     ros::Subscriber sub_grab_pose = nh.subscribe("/wpr2/right_grab", 10, RightGrabCallback);
     ros::Subscriber sub_beh = nh.subscribe("/wpr2/behaviors", 10, BehaviorCB);
@@ -209,7 +210,7 @@ int main(int argc, char **argv)
         {
             if(joints_arrived == true)
             {
-                ROS_INFO("[wpr1_right_grab] 关闭夹爪!");
+                ROS_INFO("[wpr2_right_grab] 关闭夹爪!");
                 
                 gripper_ctrl_msg.position[0] = gripper_value;
                 gripper_ctrl_pub.publish(gripper_ctrl_msg);
@@ -224,7 +225,7 @@ int main(int argc, char **argv)
         {
             if(joints_arrived == true)
             {
-                ROS_INFO("[wpr1_right_grab] 抓取完成!向上抬伸");
+                ROS_INFO("[wpr2_right_grab] 抓取完成!向上抬伸");
 
                 right_position[0] = 1.40;
                 ArmAction();
@@ -238,7 +239,24 @@ int main(int argc, char **argv)
         {
            if(joints_arrived == true)
             {
-                ROS_INFO("[wpr1_right_grab] 物品抬升完成!");
+                ROS_INFO("[wpr2_right_grab] 物品抬升完成,收回手臂");
+                right_position[0] = 1.4764;
+                right_position[1] = 1.6435;
+                right_position[2] = 1.6219;
+                right_position[3] = -1.4708;
+                right_position[4] = -1.7136;
+                right_position[5] = -1.5270;
+                ArmAction();
+                
+                nStep = STEP_HAND_BACK;
+            }
+        }
+
+        if(nStep == STEP_HAND_BACK)
+        {
+           if(joints_arrived == true)
+            {
+                ROS_INFO("[wpr2_right_grab] 物品抓取完成!");
                 std_msgs::String grab_res_msg;
                 grab_res_msg.data = "done";
                 grab_result_pub.publish(grab_res_msg);

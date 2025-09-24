@@ -15,62 +15,30 @@ static float grab_y_offset = -0.02f;        //抓取前，对准物品，机器�
 static float grab_lift_offset = 0.0f;       //脊柱高度的补偿偏移量
 static float grab_forward_offset = 0.0f;    //手臂抬起后，机器人向前抓取物品移动的位移偏移量
 static float grab_gripper_value = 0.3;      //抓取物品时，手爪闭合后的指头间距
-
-static float fTargetGrabX = 0.9;        //抓取时目标物品的x坐标
-static float fTargetGrabY = 0.0;        //抓取时目标物品的y坐标
-
 static int joint_speed = 1000;
 
 #define STEP_WAIT           0
 #define STEP_FIND_OBJ       1
 #define STEP_ALIGN_OBJ      2
-#define STEP_HAND_UP        3
-#define STEP_FORWARD        4
-#define STEP_GRAB           5
-#define STEP_OBJ_UP         6
-#define STEP_BACKWARD       7
-#define STEP_HOLDING        8
-#define STEP_DONE           9
+#define STEP_GRAB           3
+#define STEP_BACKWARD       4
+#define STEP_DONE           5
 
-static int nStep = STEP_WAIT;
+static int nStep = STEP_FIND_OBJ;
 static std::string pc_topic;
 static ros::Publisher vel_pub;
 static ros::Publisher chest_height_pub;
 static sensor_msgs::JointState chest_height_msg;
 static ros::Publisher left_arm_pub;
 static sensor_msgs::JointState left_arm_msg;
-static ros::Publisher right_arm_pub;
-static sensor_msgs::JointState right_arm_msg;
+static ros::Publisher arm_ctrl_pub;
+static sensor_msgs::JointState arm_ctrl_msg;
 static ros::Publisher gripper_ctrl_pub;
 static sensor_msgs::JointState gripper_ctrl_msg;
 static ros::Publisher result_pub;
 static ros::Publisher right_grab_pub;
-static ros::Publisher yolo_switch_pub;
-static std_msgs::String yolo_msg;
 
 void VelCmd(float inVx , float inVy, float inTz);
-
-static float right_position[6];
-// 检测动作是否到位的机制
-static bool joints_arrived = false;
-void RightArmAction()
-{
-    for(int i=0;i<6;i++)
-        right_arm_msg.position[i] = right_position[i];
-    right_arm_pub.publish(right_arm_msg);
-    joints_arrived = false;
-}
-
-void JointsResultCB(const std_msgs::String::ConstPtr &msg)
-{
-    int nFindIndex = msg->data.find("done");
-    if( nFindIndex >= 0 )
-    {
-        ROS_INFO("[wpr2_grab_bottle] 接收到关节运动结果 done");
-        joints_arrived = true;
-    }
-
-}
 
 
 static std_msgs::String result_msg;
@@ -88,6 +56,8 @@ static float fMoveTargetY = 0;
 static int nObjectCounter = 0;
 static int nTimeDelayCounter = 0;
 
+static float fTargetGrabX = 0.9;        //抓取时目标物品的x坐标
+static float fTargetGrabY = 0.0;        //抓取时目标物品的y坐标
 
 // 用于滤波的全局变量
 std::vector<geometry_msgs::Point> recent_points;
@@ -109,29 +79,6 @@ void GrabActionCallback(const geometry_msgs::Pose::ConstPtr& msg)
     // fMoveTargetY = fObjGrabY - fTargetGrabY + grab_y_offset;
     // ROS_WARN("[wpr2_grab_bottle] 移动 x = %.2f y= %.2f " ,fMoveTargetX, fMoveTargetY);
 
-    // 进入观测姿态
-    right_position[0] = -0.6;
-    right_position[1] = 1.57;
-    right_position[4] = 1.5;
-    RightArmAction();
-    // 左臂是固定姿势
-    left_arm_msg.position[0] = 0.6;
-    left_arm_msg.position[1] = -1.57;
-    left_arm_msg.position[3] = -1.5;
-    left_arm_pub.publish(left_arm_msg);
-
-    chest_height_msg.position[0] = 0.5;
-    chest_height_pub.publish(chest_height_msg);
-
-    // 张开手爪
-    gripper_ctrl_msg.position[0] = 0.15;
-    gripper_ctrl_pub.publish(gripper_ctrl_msg); 
-
-    // 开启YOLO识别
-    yolo_msg.data = "yolo start";
-    yolo_switch_pub.publish(yolo_msg);
-    ROS_INFO("[wpr2_right_bottle] --1-- 开始检测物品!");
-
     nStep = STEP_FIND_OBJ;
 }
 
@@ -142,15 +89,6 @@ void YoloPointCallback(const geometry_msgs::PointStamped::ConstPtr& msg)
     if (nStep != STEP_FIND_OBJ)
     {
         // 如果不在寻找状态，清空历史数据，以防过时数据干扰
-        if (!recent_points.empty()) {
-            recent_points.clear();
-        }
-        return;
-    }
-
-    // 观测姿势没到位也不开始检测
-    if(joints_arrived == false)
-    {
         if (!recent_points.empty()) {
             recent_points.clear();
         }
@@ -207,56 +145,25 @@ void YoloPointCallback(const geometry_msgs::PointStamped::ConstPtr& msg)
 
         ROS_WARN("[wpr2_grab_bottle] 抓取物品坐标: x=%.2f, y=%.2f, z=%.2f", fObjGrabX, fObjGrabY, fObjGrabZ);
 
-        // 关闭物品检测
-        yolo_msg.data = "yolo stop";
-        yolo_switch_pub.publish(yolo_msg);
+        // 重置里程计增量
+        ctrl_msg.data = "odom_delta reset";
+        odom_ctrl_pub.publish(ctrl_msg);
 
-        // 检查一下物品位置是否对准
-        float diff_x = fObjGrabX - fTargetGrabX;
-        float diff_y = fObjGrabY - fTargetGrabY + grab_y_offset;
-        if(fabs(diff_x) < 0.03 && fabs(diff_y) < 0.03)
-        {
-            ROS_WARN("[wpr2_grab_bottle] 已经对准物品，开始抬手（误差 x=%.2f y=%.2f）",diff_x,diff_x);
-            // 对准物品后开始抬手
-            right_position[0] = 1.4813;
-            right_position[1] = 1.5723;
-            right_position[2] = -1.5426;
-            right_position[3] = 1.3623;
-            right_position[4] = 1.4895;
-            right_position[5] = -1.3667;
-            RightArmAction();
-            ROS_INFO("[wpr2_right_bottle] --2-- 开始抬手!");
+        // 计算机器人需要移动的目标位置
+        fMoveTargetX = fObjGrabX - fTargetGrabX +0.34;
+        fMoveTargetY = fObjGrabY - fTargetGrabY + grab_y_offset;
+        ROS_WARN("[wpr2_grab_bottle] 平移对准坐标 x=%.2f, y=%.2f", fMoveTargetX, fMoveTargetY);
 
-            nStep = STEP_HAND_UP;
-            // 清空数据，为下一次抓取做准备
-            recent_points.clear();
-            return;
-        }
-        else
-        {   // 没对准物品，继续对准
-            
-            // 重置里程计增量
-            ctrl_msg.data = "odom_delta reset";
-            odom_ctrl_pub.publish(ctrl_msg);
 
-            // 计算机器人需要移动的目标位置
-            fMoveTargetX = diff_x;
-            fMoveTargetY = diff_y;
-            ROS_WARN("[wpr2_grab_bottle] 平移对准坐标 x=%.2f, y=%.2f", fMoveTargetX, fMoveTargetY);
-
-            chest_height_msg.position[0] = 0.7 - (1.05-fObjGrabZ) + grab_lift_offset;
-            ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
-            if(chest_height_msg.position[0] < 0.4) chest_height_msg.position[0] = 0.4; //保护一下，某些情况下去除
-            chest_height_pub.publish(chest_height_msg);
-            
-            // 切换到下一个步骤：对准物体
-            nStep = STEP_ALIGN_OBJ;
-            
-            // 清空数据，为下一次抓取做准备
-            recent_points.clear();
-        }
-
+        chest_height_msg.position[0] = 0.7 - (1.05-fObjGrabZ) + grab_lift_offset;
+        ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
+        chest_height_pub.publish(chest_height_msg);
         
+        // 切换到下一个步骤：对准物体
+        nStep = STEP_ALIGN_OBJ;
+        
+        // 清空数据，为下一次抓取做准备
+        recent_points.clear();
     }
 }
 
@@ -280,7 +187,30 @@ void VelCmd(float inVx , float inVy, float inTz)
 void RightResultCallback(const std_msgs::String::ConstPtr &msg)
 {
 
-    
+    //7、抓取物品
+    if(nStep == STEP_GRAB)
+    {
+        int nFindIndex = msg->data.find("done");
+        if( nFindIndex >= 0 )
+        {
+            ROS_WARN("[wpr2_grab_bottle] 抓取完成，往后退！");
+            // 重置里程计增量
+            ctrl_msg.data = "odom_delta reset";
+            odom_ctrl_pub.publish(ctrl_msg);
+
+            // 计算机器人需要移动的目标位置
+            fMoveTargetX = -0.2;
+            fMoveTargetY = 0;
+            ROS_WARN("[wpr2_grab_bottle] 后退 x=%.2f, y=%.2f", fMoveTargetX, fMoveTargetY);
+
+
+            chest_height_msg.position[0] = 0.7;
+            ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
+            chest_height_pub.publish(chest_height_msg);
+
+            nStep = STEP_BACKWARD;      
+        }
+    }
 }
 
 void BehaviorCB(const std_msgs::String::ConstPtr &msg)
@@ -309,13 +239,11 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
 
-    yolo_switch_pub = nh.advertise<std_msgs::String>("/func_switch", 10);
     vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     chest_height_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/chest_height", 10);
-    right_arm_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_arm",10);
+    arm_ctrl_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_arm",10);
     left_arm_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/left_arm",10);
     gripper_ctrl_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_gripper",10);
-    ros::Subscriber sub_joints_result = nh.subscribe("wpr2/joints_result", 10, JointsResultCB);
     result_pub = nh.advertise<std_msgs::String>("/wpr2/grab_result", 10);
     right_grab_pub = nh.advertise<std_msgs::Float32>("/wpr2/right_grab", 10); 
     ros::Subscriber sub_yolo_point = nh.subscribe("/yolo_target_3d_point", 10, YoloPointCallback);
@@ -326,27 +254,27 @@ int main(int argc, char **argv)
     odom_ctrl_pub = nh.advertise<std_msgs::String>("odom_delta_reset", 10);
     ros::Subscriber odom_delta_sub = nh.subscribe("odom_delta", 1, OdomDeltaCallback);
 
-    right_arm_msg.name.resize(6);
-    right_arm_msg.position.resize(6);
-    right_arm_msg.velocity.resize(6);
-    right_arm_msg.name[0] = "right_joint_1";
-    right_arm_msg.name[1] = "right_joint_2";
-    right_arm_msg.name[2] = "right_joint_3";
-    right_arm_msg.name[3] = "right_joint_4";
-    right_arm_msg.name[4] = "right_joint_5";
-    right_arm_msg.name[5] = "right_joint_6";
-    right_arm_msg.position[0] = -0.6;
-    right_arm_msg.position[1] = 1.57;
-    right_arm_msg.position[2] = 0;
-    right_arm_msg.position[3] = 1.5;
-    right_arm_msg.position[4] = 0;
-    right_arm_msg.position[5] = 0;
-    right_arm_msg.velocity[0] = joint_speed;
-    right_arm_msg.velocity[1] = joint_speed;
-    right_arm_msg.velocity[2] = joint_speed;
-    right_arm_msg.velocity[3] = joint_speed;
-    right_arm_msg.velocity[4] = joint_speed;
-    right_arm_msg.velocity[5] = 8000;
+    arm_ctrl_msg.name.resize(6);
+    arm_ctrl_msg.position.resize(6);
+    arm_ctrl_msg.velocity.resize(6);
+    arm_ctrl_msg.name[0] = "right_joint_1";
+    arm_ctrl_msg.name[1] = "right_joint_2";
+    arm_ctrl_msg.name[2] = "right_joint_3";
+    arm_ctrl_msg.name[3] = "right_joint_4";
+    arm_ctrl_msg.name[4] = "right_joint_5";
+    arm_ctrl_msg.name[5] = "right_joint_6";
+    arm_ctrl_msg.position[0] = -0.6;
+    arm_ctrl_msg.position[1] = 1.57;
+    arm_ctrl_msg.position[2] = 0;
+    arm_ctrl_msg.position[3] = 1.5;
+    arm_ctrl_msg.position[4] = 0;
+    arm_ctrl_msg.position[5] = 0;
+    arm_ctrl_msg.velocity[0] = joint_speed;
+    arm_ctrl_msg.velocity[1] = joint_speed;
+    arm_ctrl_msg.velocity[2] = joint_speed;
+    arm_ctrl_msg.velocity[3] = joint_speed;
+    arm_ctrl_msg.velocity[4] = joint_speed;
+    arm_ctrl_msg.velocity[5] = joint_speed;
 
     left_arm_msg.name.resize(6);
     left_arm_msg.position.resize(6);
@@ -382,23 +310,32 @@ int main(int argc, char **argv)
     chest_height_msg.velocity.resize(1);
     chest_height_msg.name[0] = "chest_height";
     chest_height_msg.position[0] = 0.7;
-    chest_height_msg.velocity[0] = 15000;
+    chest_height_msg.velocity[0] = 8000;
 
     sleep(1);
 
     ros::Rate r(30);
     while(nh.ok())
     {
-        // 1、对物品位置进行滤波
+        //1、对物品位置进行滤波
         if(nStep == STEP_FIND_OBJ)
         {
             // 滤波逻辑移至YoloPointCallback中，由消息回调驱动
-            // 主循环此处保持机器人静止，等待状态切换    
-            VelCmd(0,0,0);
-            continue;
+            // 主循环此处保持空闲，等待状态切换
+            arm_ctrl_msg.position[0] = -0.6;
+            arm_ctrl_msg.position[1] = 1.57;
+            arm_ctrl_msg.position[4] = 1.5;
+            arm_ctrl_pub.publish(arm_ctrl_msg);
+            left_arm_pub.publish(left_arm_msg);
+
+            chest_height_msg.position[0] = 0.5;
+            // ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
+            chest_height_pub.publish(chest_height_msg);   
+
+            VelCmd(0,0,0); // 等待时停止移动
         }
     
-        // 2、左右平移对准目标物品
+        //4、左右平移对准目标物品
         if(nStep == STEP_ALIGN_OBJ)
         {
             float vx,vy;
@@ -406,7 +343,7 @@ int main(int argc, char **argv)
             vy = (fMoveTargetY - odom_delta.y)/2;
 
             VelCmd(vx,vy,0);
-            ROS_INFO("[对准物品] 目标(%.2f %.2f)  里程(%.2f , %.2f) 速度(%.2f,%.2f)" ,fMoveTargetX, fMoveTargetY, odom_delta.x ,odom_delta.y,vx,vy);
+            ROS_INFO("[MOVE] 目标(%.2f %.2f)  里程(%.2f , %.2f) 速度(%.2f,%.2f)" ,fMoveTargetX, fMoveTargetY, odom_delta.x ,odom_delta.y,vx,vy);
 
             if(fabs(vx) < 0.01 && fabs(vy) < 0.01)
             {
@@ -415,104 +352,21 @@ int main(int argc, char **argv)
                 odom_ctrl_pub.publish(ctrl_msg);
                 nTimeDelayCounter = 0;
 
-                ROS_WARN("[wpr2_grab_bottle] 移动完成后打开检测，再次进行物品对准确认。");
-
-                // 关闭物品检测
-                yolo_msg.data = "yolo start";
-                yolo_switch_pub.publish(yolo_msg);
-                nStep = STEP_FIND_OBJ;
-                continue;
-            }
-        }
-
-        // 3、抬手
-        if(nStep == STEP_HAND_UP)
-        {
-            if(joints_arrived == true)
-            {
-                ROS_INFO("[wpr2_right_bottle] --3-- 抬手完毕，往前移动!");// 重置里程计增量
-                ctrl_msg.data = "odom_delta reset";
-                odom_ctrl_pub.publish(ctrl_msg);
-
-                fMoveTargetX = 0.5 + grab_forward_offset;
-                fMoveTargetY = 0;
-                nStep = STEP_FORWARD;
-                continue;
-            }
-        }
-
-        // 4、往前移动让物品进入手爪
-        if(nStep == STEP_FORWARD)
-        {
-            float vx,vy;
-            vx = (fMoveTargetX - odom_delta.x)/2;
-            vy = (fMoveTargetY - odom_delta.y)/2;
-
-            VelCmd(vx,vy,0);
-            ROS_INFO("[前进] 目标(%.2f %.2f)  里程(%.2f , %.2f) 速度(%.2f,%.2f)" ,fMoveTargetX, fMoveTargetY, odom_delta.x ,odom_delta.y,vx,vy);
-
-            if(fabs(vx) < 0.01 && fabs(vy) < 0.01)
-            {
-                VelCmd(0,0,0);
-                ctrl_msg.data = "odom_delta reset";
-                odom_ctrl_pub.publish(ctrl_msg);
-                nTimeDelayCounter = 0;
-
-                // 闭合手爪
-                gripper_ctrl_msg.position[0] = grab_gripper_value;
-                gripper_ctrl_pub.publish(gripper_ctrl_msg);
-                joints_arrived = false;
+                // 激活右手抓取
+                std_msgs::Float32 right_grab_msg;
+                right_grab_msg.data = 0.05;
+                right_grab_pub.publish(right_grab_msg);
 
                 nStep = STEP_GRAB;
-                continue;
+                // 转到回调函数去处理
             }
-        }
 
-        // 5、抓取物品
-        if(nStep == STEP_GRAB)
-        {
-            VelCmd(0,0,0);
-            if( joints_arrived == true )
-            {
-                ROS_WARN("[wpr2_grab_bottle] 抓取完成，往上抬！");
-                
-                right_position[0] = 1.6673;
-                right_position[1] = 1.5699;
-                right_position[2] = -1.5818;
-                right_position[3] = 1.3601;
-                right_position[4] = 1.6793;
-                right_position[5] = -1.3631;
-                RightArmAction();
-
-                nStep = STEP_OBJ_UP; 
-                continue;     
-            }
-        }
-
-        // 6、将物品上抬
-        if(nStep == STEP_OBJ_UP)
-        {
-            if( joints_arrived == true )
-            {
-                ROS_WARN("[wpr2_grab_bottle] 上抬完毕，开始往后退！");
-
-                chest_height_msg.position[0] = 0.7;
-                ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
-                chest_height_pub.publish(chest_height_msg);
-
-                ctrl_msg.data = "odom_delta reset";
-                odom_ctrl_pub.publish(ctrl_msg);
-
-                fMoveTargetX = -0.5 + grab_forward_offset;
-                fMoveTargetY = 0;
-
-                nStep = STEP_BACKWARD;
-                continue;    
-            }
+            result_msg.data = "object x";
+            result_pub.publish(result_msg);
         }
 
        
-        // 7、带着物品后退
+        //9、带着物品后退
         if(nStep == STEP_BACKWARD)
         {
             float vx,vy;
@@ -529,34 +383,11 @@ int main(int argc, char **argv)
                 odom_ctrl_pub.publish(ctrl_msg);
                 nTimeDelayCounter = 0;
 
-                ROS_WARN("[wpr2_grab_bottle] 后退完毕，开始折叠手臂持有物品！");
-                // 持有物品的姿势
-                right_position[0] = -0.1593;
-                right_position[1] = 1.5128;
-                right_position[2] = -0.0382;
-                right_position[3] = 1.7225;
-                right_position[4] = 0.0637;
-                right_position[5] = 1.5130;
-                RightArmAction();
-
-                nStep = STEP_HOLDING;
-                continue;
-            }
-        }
-
-        // 8、持有物品
-        if(nStep == STEP_HOLDING)
-        {
-            if( joints_arrived == true )
-            {
-                ROS_WARN("[wpr2_grab_bottle] 抓取动作完成！");
-
                 nStep = STEP_DONE;
-                continue;    
             }
         }
 
-        // 9、抓取任务完毕
+        //10、抓取任务完毕
         if(nStep == STEP_DONE)
         {
             if(nTimeDelayCounter < 10)
