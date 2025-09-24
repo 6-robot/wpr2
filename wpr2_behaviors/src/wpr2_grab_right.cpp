@@ -44,7 +44,6 @@
 #include <std_msgs/Float32.h>
 #include <tf/transform_broadcaster.h>
 
-
 #define STEP_WAIT           0
 #define STEP_HAND_UP        1
 #define STEP_FORWARD        2
@@ -58,12 +57,13 @@ static ros::Publisher arm_ctrl_pub;
 static sensor_msgs::JointState arm_ctrl_msg;
 static ros::Publisher gripper_ctrl_pub;
 static sensor_msgs::JointState gripper_ctrl_msg;
+static float gripper_value = 0.15;
 
 static ros::Publisher grab_result_pub;
 static std_msgs::String result_msg;
 
 static int nTimeDelayCounter = 0;
-static int joint_speed = 1000;
+static int joint_speed = 2000;
 static float right_position[6];
 static bool joints_arrived = false;
 
@@ -77,7 +77,7 @@ void ArmAction()
 
 void RightGrabCallback(const std_msgs::Float32::ConstPtr& msg)
 {
-    gripper_ctrl_msg.position[0] = msg->data;
+    gripper_value = msg->data;
 
     right_position[0] = 0.7846;
     right_position[1] = -0.5484;
@@ -87,7 +87,12 @@ void RightGrabCallback(const std_msgs::Float32::ConstPtr& msg)
     right_position[5] = 1.1738;
     ArmAction();
 
+    gripper_ctrl_msg.position[0] = 0.15;
+    gripper_ctrl_pub.publish(gripper_ctrl_msg);
+
     nStep = STEP_HAND_UP;
+
+    ROS_INFO("[wpr2_right_grab] --1-- 开始抬手");
 }
 
 void JointsResultCB(const std_msgs::String::ConstPtr &msg)
@@ -95,7 +100,7 @@ void JointsResultCB(const std_msgs::String::ConstPtr &msg)
     int nFindIndex = msg->data.find("done");
     if( nFindIndex >= 0 )
     {
-        ROS_INFO("[wpr1_right_grab] 接收到关节运动结果 done");
+        ROS_INFO("[wpr2_right_grab] 接收到关节运动结果 done");
         joints_arrived = true;
     }
 
@@ -115,8 +120,8 @@ void BehaviorCB(const std_msgs::String::ConstPtr &msg)
 int main(int argc, char **argv)
 {
     setlocale(LC_ALL,"");
-    ros::init(argc, argv, "wpr1_right_grab");
-    ROS_INFO("wpr1_right_grab start!");
+    ros::init(argc, argv, "wpr2_right_grab");
+    ROS_INFO("wpr2_right_grab start!");
 
     ros::NodeHandle nh;
 
@@ -144,17 +149,17 @@ int main(int argc, char **argv)
     arm_ctrl_msg.position[4] = 1.0;
     arm_ctrl_msg.position[5] = 0;
     arm_ctrl_msg.velocity[0] = joint_speed;
-    arm_ctrl_msg.velocity[1] = joint_speed;
+    arm_ctrl_msg.velocity[1] = 2000;
     arm_ctrl_msg.velocity[2] = joint_speed;
-    arm_ctrl_msg.velocity[3] = joint_speed;
+    arm_ctrl_msg.velocity[3] = 8000;
     arm_ctrl_msg.velocity[4] = joint_speed;
-    arm_ctrl_msg.velocity[5] = joint_speed;
+    arm_ctrl_msg.velocity[5] = 5000;
 
     gripper_ctrl_msg.name.resize(1);
     gripper_ctrl_msg.position.resize(1);
     gripper_ctrl_msg.velocity.resize(1);
     gripper_ctrl_msg.name[0] = "right_gripper";
-    gripper_ctrl_msg.position[0] = 0.1;
+    gripper_ctrl_msg.position[0] = 0.15;
     gripper_ctrl_msg.velocity[0] = 2000;
 
     ros::Rate r(30);
@@ -166,14 +171,14 @@ int main(int argc, char **argv)
         {
             if(joints_arrived == true)
             {
-                ROS_INFO("[wpr1_right_grab] 抬手完毕，往前伸手!");
+                ROS_INFO("[wpr2_right_grab] --2-- 抬手完毕，往前伸手!");
 
-                right_position[0] = 1.1056;
-                right_position[1] = -0.2114;
-                right_position[2] = -1.1805;
-                right_position[3] = 1.7792;
-                right_position[4] = 1.7371;
-                right_position[5] = 0.8187;
+                right_position[0] = 1.3069;
+                right_position[1] = 1.0160;
+                right_position[2] = -1.4946;
+                right_position[3] = 1.7675;
+                right_position[4] = 1.4017;
+                right_position[5] = -0.8038;
                 ArmAction();
 
                 nStep = STEP_FORWARD;
@@ -185,14 +190,14 @@ int main(int argc, char **argv)
         {
             if(joints_arrived == true)
             {
-                ROS_INFO("[wpr1_right_grab] 伸手完毕，往前让物品进入夹爪!");
+                ROS_INFO("[wpr2_right_grab] --3-- 伸手完毕，往前让物品进入夹爪!");
 
-                right_position[0] = 1.4270;
-                right_position[1] = 1.4074;
-                right_position[2] = -1.4126;
-                right_position[3] = 0.6032;
-                right_position[4] = 1.4938;
-                right_position[5] = 0.3974;
+                right_position[0] = 1.3386;
+                right_position[1] = 1.6764;
+                right_position[2] = -1.2390;
+                right_position[3] = 0.4614;
+                right_position[4] = 1.1884;
+                right_position[5] = -0.1357;
                 ArmAction();
 
                 nStep = STEP_REACH;
@@ -205,8 +210,10 @@ int main(int argc, char **argv)
             if(joints_arrived == true)
             {
                 ROS_INFO("[wpr1_right_grab] 关闭夹爪!");
-
+                
+                gripper_ctrl_msg.position[0] = gripper_value;
                 gripper_ctrl_pub.publish(gripper_ctrl_msg);
+                ArmAction();
 
                 nStep = STEP_GRAB;
             }
@@ -219,7 +226,7 @@ int main(int argc, char **argv)
             {
                 ROS_INFO("[wpr1_right_grab] 抓取完成!向上抬伸");
 
-                right_position[0] = 1.50;
+                right_position[0] = 1.40;
                 ArmAction();
 
                 nStep = STEP_REACH;

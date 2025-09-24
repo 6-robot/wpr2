@@ -15,8 +15,8 @@ class TfPublisherGui(QWidget):
         rospy.init_node('joints_panel', anonymous=True)
 
         self.joint_states_pub = rospy.Publisher('joint_states', JointState, queue_size=10)
-        self.left_gripper_pub = rospy.Publisher('wpr2/left_gripper', JointState, queue_size=10)
-        self.right_gripper_pub = rospy.Publisher('wpr2/right_gripper', JointState, queue_size=10)
+        self.left_gripper_pub = rospy.Publisher('/real/wpr2/left_gripper', JointState, queue_size=10)
+        self.right_gripper_pub = rospy.Publisher('/real/wpr2/right_gripper', JointState, queue_size=10)
         self.cmd_pub = rospy.Publisher('wpr2_cmd', String, queue_size=10)
 
         self.femto_height_pos = 0.0
@@ -216,12 +216,14 @@ class TfPublisherGui(QWidget):
         left_gripper_msg.header.stamp = rospy.Time.now()
         left_gripper_msg.name = ["left_gripper"]
         left_gripper_msg.position = [self.sliders["left_gripper"].value() / 1000.0]
+        left_gripper_msg.velocity = [2000]
         self.left_gripper_pub.publish(left_gripper_msg)
 
         right_gripper_msg = JointState()
         right_gripper_msg.header.stamp = rospy.Time.now()
         right_gripper_msg.name = ["right_gripper"]
         right_gripper_msg.position = [self.sliders["right_gripper"].value() / 1000.0]
+        right_gripper_msg.velocity = [2000]
         self.right_gripper_pub.publish(right_gripper_msg)
 
 if __name__ == '__main__':

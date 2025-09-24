@@ -7,13 +7,16 @@
 
   <!-- 启动YOLO检测节点 -->
   <node name="yolo_detector" pkg="wp_yolo" type="yolo_detector.py" >
-      <!-- 将arg传入的参数设置为节点的私有参数 -->
-      <param name="image_topic" value="$(arg image_topic)" />
-      <param name="model_path" value="$(find wp_yolo)/models/$(arg model_name)" />
-      <param name="display_image" value="$(arg display_image)" />
+    <!-- 将arg传入的参数设置为节点的私有参数 -->
+    <param name="image_topic" value="$(arg image_topic)" />
+    <param name="model_path" value="$(find wp_yolo)/models/$(arg model_name)" />
+    <param name="display_image" value="$(arg display_image)" />
+    <param name="detection_active" value="true" />
   </node>
   <!-- 启动 检测结果可视化节点 (C++) -->
-  <node name="detection_visualizer" pkg="wp_yolo" type="detection_visualizer_node" output="screen" />
+  <node name="detection_visualizer" pkg="wp_yolo" type="detection_visualizer_node" output="screen" >
+    <param name="target_frame_id" value="base_footprint" />
+  </node>
 
   <!-- 机器人tf -->
   <arg name="model" default="$(find wpr2_description)/urdf/wpr2.urdf.xacro"/>
@@ -25,10 +28,10 @@
   </node> -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 
+  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" /> -->
 
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
-
-  <include file="$(find wpr2_bringup)/launch/include/start_femto_bolt.launch" />
+  <!-- <include file="$(find wpr2_bringup)/launch/include/start_femto_bolt.launch" /> -->
+  <include file="$(find wpr2_bringup)/launch/include/femto_without_pointcloud.launch" />
     
   <!-- wpr2 core-->
   <node pkg="wpr2_bringup" type="wpr2_core" name="wpr2_core" output="screen">

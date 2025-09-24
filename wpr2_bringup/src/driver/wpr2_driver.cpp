@@ -525,7 +525,7 @@ void CWPR2_driver::TorsoCmd(int* inPos, int* inSpeed)
 	{
 		m_Split4Bytes(arTorsoCmdData + i*8, inSpeed[i]);
 		m_Split4Bytes(arTorsoCmdData + i*8 + 4, inPos[i]);
-		//printf("发送[%d]关节位置数值为 %d\n", i, inPos[i]);
+		// printf("发送[%d]关节位置数值为 %d\n", i, inPos[i]);
 	}
 	int nCmdLenght = GenCmd(0, 0x41, 0x08, 0x63, arTorsoCmdData, 15*8);
 	Send(m_SendBuf, nCmdLenght);

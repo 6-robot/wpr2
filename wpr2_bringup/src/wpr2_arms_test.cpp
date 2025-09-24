@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     ros::Subscriber joint_states_sub = nh.subscribe("/plan/joint_states", 10, jointStatesCallback);
 
     // 订阅/wpr2_cmd话题
-    ros::Subscriber cmd_sub = nh.subscribe("/wpr2_cmd", 10, cmdCallback);
+    ros::Subscriber cmd_sub = nh.subscribe("/plan/wpr2_cmd", 10, cmdCallback);
 
     // 不同关节组创建发布者
     ros::Publisher chest_height_pub = nh.advertise<sensor_msgs::JointState>("/real/wpr2/chest_height", 10);
@@ -74,13 +74,23 @@ int main(int argc, char **argv)
             ROS_WARN("********** 正在发送胸部升降指令 **********");
             sensor_msgs::JointState chest_msg;
             chest_msg.header.stamp = ros::Time::now();
+            chest_msg.name.resize(1);
+            chest_msg.position.resize(1);
+            chest_msg.velocity.resize(1);
             if (joint_names.size() > 4 && joint_positions.size() > 4)
             {
-                chest_msg.name.push_back(joint_names[4]);
-                chest_msg.position.push_back(joint_positions[4]);
-                chest_msg.velocity.push_back(18000);
-                chest_height_pub.publish(chest_msg);
-                ROS_INFO("发布到 /real/wpr2/chest_height: %s = %f", chest_msg.name[0].c_str(), chest_msg.position[0]);
+                int joint_num = joint_names.size();
+                for(int i=0;i<joint_num;i++)
+                {
+                    if(joint_names[i] == "chest_height")
+                    {
+                        chest_msg.name[0] = joint_names[i];
+                        chest_msg.position[0] = joint_positions[i];
+                        chest_msg.velocity[0] = 18000;
+                        chest_height_pub.publish(chest_msg);
+                        ROS_INFO("发布到 /real/wpr2/chest_height: %s = %f", chest_msg.name[0].c_str(), chest_msg.position[0]);
+                    }
+                }
             } else {
                 ROS_ERROR("关节数据不足，无法发送胸部升降指令！");
             }
@@ -93,11 +103,46 @@ int main(int argc, char **argv)
             left_arm_msg.header.stamp = ros::Time::now();
             if (joint_names.size() > 12 && joint_positions.size() > 12)
             {
-                left_arm_msg.name.assign(joint_names.begin() + 7, joint_names.begin() + 13);
-                left_arm_msg.position.assign(joint_positions.begin() + 7, joint_positions.begin() + 13);
+                int joint_num = joint_names.size();
+                left_arm_msg.name.resize(6);
+                left_arm_msg.position.resize(6);
+                left_arm_msg.velocity.resize(6);
+                for(int i=0;i<joint_num;i++)
+                {
+                    if(joint_names[i] == "left_joint_1")
+                    {
+                        left_arm_msg.name[0] = joint_names[i];
+                        left_arm_msg.position[0] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "left_joint_2")
+                    {
+                        left_arm_msg.name[1] = joint_names[i];
+                        left_arm_msg.position[1] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "left_joint_3")
+                    {
+                        left_arm_msg.name[2] = joint_names[i];
+                        left_arm_msg.position[2] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "left_joint_4")
+                    {
+                        left_arm_msg.name[3] = joint_names[i];
+                        left_arm_msg.position[3] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "left_joint_5")
+                    {
+                        left_arm_msg.name[4] = joint_names[i];
+                        left_arm_msg.position[4] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "left_joint_6")
+                    {
+                        left_arm_msg.name[5] = joint_names[i];
+                        left_arm_msg.position[5] =  joint_positions[i];
+                    }
+                }
                 for(size_t i = 0; i < left_arm_msg.name.size(); ++i)
                 {
-                    left_arm_msg.velocity.push_back(2000);
+                    left_arm_msg.velocity[i] = 2000;
                 }
                 left_arm_pub.publish(left_arm_msg);
                 ROS_INFO("发布到 /real/wpr2/left_arm:");
@@ -117,11 +162,46 @@ int main(int argc, char **argv)
             right_arm_msg.header.stamp = ros::Time::now();
             if (joint_names.size() > 18 && joint_positions.size() > 18)
             {
-                right_arm_msg.name.assign(joint_names.begin() + 13, joint_names.begin() + 19);
-                right_arm_msg.position.assign(joint_positions.begin() + 13, joint_positions.begin() + 19);
+                int joint_num = joint_names.size();
+                right_arm_msg.name.resize(6);
+                right_arm_msg.position.resize(6);
+                right_arm_msg.velocity.resize(6);
+                for(int i=0;i<joint_num;i++)
+                {
+                    if(joint_names[i] == "right_joint_1")
+                    {
+                        right_arm_msg.name[0] = joint_names[i];
+                        right_arm_msg.position[0] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "right_joint_2")
+                    {
+                        right_arm_msg.name[1] = joint_names[i];
+                        right_arm_msg.position[1] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "right_joint_3")
+                    {
+                        right_arm_msg.name[2] = joint_names[i];
+                        right_arm_msg.position[2] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "right_joint_4")
+                    {
+                        right_arm_msg.name[3] = joint_names[i];
+                        right_arm_msg.position[3] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "right_joint_5")
+                    {
+                        right_arm_msg.name[4] = joint_names[i];
+                        right_arm_msg.position[4] =  joint_positions[i];
+                    }
+                    if(joint_names[i] == "right_joint_6")
+                    {
+                        right_arm_msg.name[5] = joint_names[i];
+                        right_arm_msg.position[5] =  joint_positions[i];
+                    }
+                }
                 for(size_t i = 0; i < right_arm_msg.name.size(); ++i)
                 {
-                    right_arm_msg.velocity.push_back(2000);
+                    right_arm_msg.velocity[i] = 2000;
                 }
                 right_arm_pub.publish(right_arm_msg);
                 ROS_INFO("发布到 /real/wpr2/right_arm:");

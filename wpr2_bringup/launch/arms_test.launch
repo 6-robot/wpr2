@@ -34,7 +34,6 @@
   <node pkg="tf" type="static_transform_publisher" name="world_to_plan_footprint" args="0 1 0 0 0 0 /world /plan/base_footprint 100" />
   <node pkg="tf" type="static_transform_publisher" name="world_to_real_footprint" args="0 0 0 0 0 0 /world /real/base_footprint 100" />
 
-
   <node pkg="wpr2_bringup" type="wpr2_arms_test" name="wpr2_arms_test" output="screen"/>
 
   <!-- RViz node -->

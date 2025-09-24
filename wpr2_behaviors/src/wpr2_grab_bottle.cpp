@@ -27,6 +27,10 @@ static int joint_speed = 1000;
 static int nStep = STEP_FIND_OBJ;
 static std::string pc_topic;
 static ros::Publisher vel_pub;
+static ros::Publisher chest_height_pub;
+static sensor_msgs::JointState chest_height_msg;
+static ros::Publisher left_arm_pub;
+static sensor_msgs::JointState left_arm_msg;
 static ros::Publisher arm_ctrl_pub;
 static sensor_msgs::JointState arm_ctrl_msg;
 static ros::Publisher gripper_ctrl_pub;
@@ -63,18 +67,19 @@ const double DISTANCE_THRESHOLD = 0.05;         // 连续检测点的距离阈�
 void GrabActionCallback(const geometry_msgs::Pose::ConstPtr& msg)
 {
     // 目标物品的坐标
-    fObjGrabX = msg->position.x;
-    fObjGrabY = msg->position.y;
-    fObjGrabZ = msg->position.z;
-    ROS_WARN("[OBJ_TO_GRAB] x = %.2f y= %.2f ,z= %.2f " ,fObjGrabX, fObjGrabY, fObjGrabZ);
-    ctrl_msg.data = "odom_delta reset";
-    odom_ctrl_pub.publish(ctrl_msg);
+    // fObjGrabX = msg->position.x;
+    // fObjGrabY = msg->position.y;
+    // fObjGrabZ = msg->position.z;
+    // ROS_WARN("[wpr2_grab_bottle] 抓取坐标 x = %.2f y= %.2f ,z= %.2f " ,fObjGrabX, fObjGrabY, fObjGrabZ);
+    // ctrl_msg.data = "odom_delta reset";
+    // odom_ctrl_pub.publish(ctrl_msg);
 
-    // ajudge the dist to obj
-    fMoveTargetX = fObjGrabX - fTargetGrabX;
-    fMoveTargetY = fObjGrabY - fTargetGrabY + grab_y_offset;
-    ROS_WARN("[MOVE_TARGET] x = %.2f y= %.2f " ,fMoveTargetX, fMoveTargetY);
-    nStep = STEP_ALIGN_OBJ;
+    // // ajudge the dist to obj
+    // fMoveTargetX = fObjGrabX - fTargetGrabX;
+    // fMoveTargetY = fObjGrabY - fTargetGrabY + grab_y_offset;
+    // ROS_WARN("[wpr2_grab_bottle] 移动 x = %.2f y= %.2f " ,fMoveTargetX, fMoveTargetY);
+
+    nStep = STEP_FIND_OBJ;
 }
 
 // 订阅/yolo_target_3d_point的回调函数，用于滤波和触发抓取
@@ -138,16 +143,21 @@ void YoloPointCallback(const geometry_msgs::PointStamped::ConstPtr& msg)
         fObjGrabY = avg_y / recent_points.size();
         fObjGrabZ = avg_z / recent_points.size();
 
-        ROS_WARN("[OBJ_TO_GRAB] 抓取物品坐标: x=%.2f, y=%.2f, z=%.2f", fObjGrabX, fObjGrabY, fObjGrabZ);
+        ROS_WARN("[wpr2_grab_bottle] 抓取物品坐标: x=%.2f, y=%.2f, z=%.2f", fObjGrabX, fObjGrabY, fObjGrabZ);
 
         // 重置里程计增量
         ctrl_msg.data = "odom_delta reset";
         odom_ctrl_pub.publish(ctrl_msg);
 
         // 计算机器人需要移动的目标位置
-        fMoveTargetX = fObjGrabX - fTargetGrabX;
+        fMoveTargetX = fObjGrabX - fTargetGrabX +0.34;
         fMoveTargetY = fObjGrabY - fTargetGrabY + grab_y_offset;
-        ROS_WARN("[MOVE_TARGET] 平移对准坐标 x=%.2f, y=%.2f", fMoveTargetX, fMoveTargetY);
+        ROS_WARN("[wpr2_grab_bottle] 平移对准坐标 x=%.2f, y=%.2f", fMoveTargetX, fMoveTargetY);
+
+
+        chest_height_msg.position[0] = 0.7 - (1.05-fObjGrabZ) + grab_lift_offset;
+        ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
+        chest_height_pub.publish(chest_height_msg);
         
         // 切换到下一个步骤：对准物体
         nStep = STEP_ALIGN_OBJ;
@@ -195,13 +205,16 @@ void BehaviorCB(const std_msgs::String::ConstPtr &msg)
 
 int main(int argc, char **argv)
 {
+    setlocale(LC_ALL,"");
     ros::init(argc, argv, "wpr2_grab_bottle");
     ROS_WARN("wpr2_grab_bottle start!");
 
     ros::NodeHandle nh;
 
     vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    chest_height_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/chest_height", 10);
     arm_ctrl_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_arm",10);
+    left_arm_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/left_arm",10);
     gripper_ctrl_pub = nh.advertise<sensor_msgs::JointState>("/wpr2/right_gripper",10);
     result_pub = nh.advertise<std_msgs::String>("/wpr2/grab_result", 10);
     right_grab_pub = nh.advertise<std_msgs::Float32>("/wpr2/right_grab", 10); 
@@ -224,8 +237,8 @@ int main(int argc, char **argv)
     arm_ctrl_msg.position[0] = -0.6;
     arm_ctrl_msg.position[1] = 1.57;
     arm_ctrl_msg.position[2] = 0;
-    arm_ctrl_msg.position[3] = 0;
-    arm_ctrl_msg.position[4] = 1.0;
+    arm_ctrl_msg.position[3] = 1.5;
+    arm_ctrl_msg.position[4] = 0;
     arm_ctrl_msg.position[5] = 0;
     arm_ctrl_msg.velocity[0] = joint_speed;
     arm_ctrl_msg.velocity[1] = joint_speed;
@@ -234,6 +247,28 @@ int main(int argc, char **argv)
     arm_ctrl_msg.velocity[4] = joint_speed;
     arm_ctrl_msg.velocity[5] = joint_speed;
 
+    left_arm_msg.name.resize(6);
+    left_arm_msg.position.resize(6);
+    left_arm_msg.velocity.resize(6);
+    left_arm_msg.name[0] = "left_joint_1";
+    left_arm_msg.name[1] = "left_joint_2";
+    left_arm_msg.name[2] = "left_joint_3";
+    left_arm_msg.name[3] = "left_joint_4";
+    left_arm_msg.name[4] = "left_joint_5";
+    left_arm_msg.name[5] = "left_joint_6";
+    left_arm_msg.position[0] = 0.6;
+    left_arm_msg.position[1] = -1.57;
+    left_arm_msg.position[2] = 0;
+    left_arm_msg.position[3] = -1.5;
+    left_arm_msg.position[4] = 0;
+    left_arm_msg.position[5] = 0;
+    left_arm_msg.velocity[0] = joint_speed;
+    left_arm_msg.velocity[1] = joint_speed;
+    left_arm_msg.velocity[2] = joint_speed;
+    left_arm_msg.velocity[3] = joint_speed;
+    left_arm_msg.velocity[4] = joint_speed;
+    left_arm_msg.velocity[5] = joint_speed;
+
     gripper_ctrl_msg.name.resize(1);
     gripper_ctrl_msg.position.resize(1);
     gripper_ctrl_msg.velocity.resize(1);
@@ -241,7 +276,16 @@ int main(int argc, char **argv)
     gripper_ctrl_msg.position[0] = 0.1;
     gripper_ctrl_msg.velocity[0] = 2000;
 
-    ros::Rate r(30);
+    chest_height_msg.name.resize(1);
+    chest_height_msg.position.resize(1);
+    chest_height_msg.velocity.resize(1);
+    chest_height_msg.name[0] = "chest_height";
+    chest_height_msg.position[0] = 0.7;
+    chest_height_msg.velocity[0] = 8000;
+
+    sleep(1);
+
+    ros::Rate r(1);
     while(nh.ok())
     {
         //1、对物品位置进行滤波
@@ -249,6 +293,17 @@ int main(int argc, char **argv)
         {
             // 滤波逻辑移至YoloPointCallback中，由消息回调驱动
             // 主循环此处保持空闲，等待状态切换
+            arm_ctrl_msg.position[0] = -0.6;
+            arm_ctrl_msg.position[1] = 1.57;
+            arm_ctrl_msg.position[4] = 1.5;
+            arm_ctrl_pub.publish(arm_ctrl_msg);
+            left_arm_pub.publish(left_arm_msg);
+
+            chest_height_msg.position[0] = 0.5;
+            // ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
+            chest_height_pub.publish(chest_height_msg);
+           
+
             VelCmd(0,0,0); // 等待时停止移动
         }
     
@@ -260,7 +315,7 @@ int main(int argc, char **argv)
             vy = (fMoveTargetY - odom_delta.y)/2;
 
             VelCmd(vx,vy,0);
-            //ROS_INFO("[MOVE] T(%.2f %.2f)  od(%.2f , %.2f) v(%.2f,%.2f)" ,fMoveTargetX, fMoveTargetY, odom_delta.x ,odom_delta.y,vx,vy);
+            ROS_INFO("[MOVE] 目标(%.2f %.2f)  里程(%.2f , %.2f) 速度(%.2f,%.2f)" ,fMoveTargetX, fMoveTargetY, odom_delta.x ,odom_delta.y,vx,vy);
 
             if(fabs(vx) < 0.01 && fabs(vy) < 0.01)
             {

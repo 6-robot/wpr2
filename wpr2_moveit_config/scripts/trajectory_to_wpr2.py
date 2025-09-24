@@ -72,7 +72,7 @@ class TrajectoryActionBridge(object):
                 js_msg.velocity = [2000] * len(joint_names)
                 js_msg.effort = []
                 self._pub.publish(js_msg)
-                rospy.loginfo("发送关节指令: " + str(js_msg.name))
+                # rospy.loginfo("发送关节指令: " + str(js_msg.name))
             else:
                 # --- 1. 处理升降关节 (第一个成员) ---
                 lift_msg = JointState()
@@ -81,12 +81,12 @@ class TrajectoryActionBridge(object):
                 # 使用 [list[0]] 的方式获取第一个成员，并保持其为列表格式
                 lift_msg.name = [joint_names[0]]
                 lift_msg.position = [point.positions[0]]
-                lift_msg.velocity = [2000]
+                lift_msg.velocity = [10000]
                 lift_msg.effort = []
                 
                 # 发布升降指令
                 self._lift_pub.publish(lift_msg)
-                rospy.loginfo("发送升降指令: " + str(lift_msg.name))
+                # rospy.loginfo("发送升降指令: " + str(lift_msg.name))
 
                 # --- 2. 处理手臂关节 (剩下的成员) ---
                 js_msg = JointState()
@@ -100,7 +100,7 @@ class TrajectoryActionBridge(object):
                 
                 # 发布手臂关节指令
                 self._pub.publish(js_msg)
-                rospy.loginfo("发送关节指令: " + str(js_msg.name))
+                # rospy.loginfo("发送关节指令: " + str(js_msg.name))
 
         rospy.loginfo( self._arm_name + " 的规划路径执行完毕！")
         # 设置Action结果为成功

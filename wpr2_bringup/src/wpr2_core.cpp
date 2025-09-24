@@ -168,6 +168,7 @@ void LeftArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
     for(int i=0;i<nNumJoint;i++)
     {
         // ROS_INFO("[LeftArm 接收] msg->position[%d] = (%.2f)",i, msg->position[i]);
+        // ROS_INFO("[LeftArm 接收] msg->velocity[%d] = (%.2f)",i, msg->velocity[i]);
         arLeftArmPos[i] = msg->position[i] * kAngleToDegree;
         arLeftArmSpeed[i] = msg->velocity[i];
     }
@@ -193,6 +194,7 @@ void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
     for(int i=0;i<nNumJoint;i++)
     {
         // ROS_INFO("[RightArm 接收] msg->position[%d] = (%.2f)",i, msg->position[i]);
+        // ROS_INFO("[RightArm 接收] msg->velocity[%d] = (%.2f)",i, msg->velocity[i]);
         arRightArmPos[i] = msg->position[i] * kAngleToDegree;
         arRightArmSpeed[i] = msg->velocity[i];
     }
@@ -589,6 +591,7 @@ int main(int argc, char** argv)
                 joints_res_msg.data = "done";
                 joints_result_pub.publish(joints_res_msg);
                 bJointAction = false;
+                // ROS_WARN("[wpr2_core] 运动到位！");
             }
         }
 
