@@ -11,26 +11,32 @@
 #include <cmath>
 
 // 抓取参数调节（单位：米）
-static float grab_y_offset = -0.02f;        //抓取前，对准物品，机器人的横向位移偏移量
+static float grab_y_offset = 0.0f;        //抓取前，对准物品，机器人的横向位移偏移量
 static float grab_lift_offset = 0.0f;       //脊柱高度的补偿偏移量
-static float grab_forward_offset = 0.0f;    //手臂抬起后，机器人向前抓取物品移动的位移偏移量
-static float grab_gripper_value = 0.3;      //抓取物品时，手爪闭合后的指头间距
+static float grab_forward_range = 0.3f;    //手臂抬起后，机器人向前抓取物品移动的移动距离
+static float grab_gripper_value = 0.06;      //抓取物品时，手爪闭合后的指头间距
 
-static float fTargetGrabX = 0.9;        //抓取时目标物品的x坐标
+// 用于滤波的全局变量
+std::vector<geometry_msgs::Point> recent_points;
+const int REQUIRED_CONSECUTIVE_POINTS = 30;      // 需要连续检测这么多次才能确认物品检测到了
+const double DISTANCE_THRESHOLD = 0.01;         // 连续检测点的距离阈值（米）
+
+static float fTargetGrabX = 0.7;        //抓取时目标物品的x坐标
 static float fTargetGrabY = 0.0;        //抓取时目标物品的y坐标
 
-static int joint_speed = 1000;
+static int joint_speed = 2000;
 
 #define STEP_WAIT           0
-#define STEP_FIND_OBJ       1
-#define STEP_ALIGN_OBJ      2
-#define STEP_HAND_UP        3
-#define STEP_FORWARD        4
-#define STEP_GRAB           5
-#define STEP_OBJ_UP         6
-#define STEP_BACKWARD       7
-#define STEP_HOLDING        8
-#define STEP_DONE           9
+#define STEP_INIT_POSE      1
+#define STEP_FIND_OBJ       2
+#define STEP_ALIGN_OBJ      3
+#define STEP_HAND_UP        4
+#define STEP_FORWARD        5
+#define STEP_GRAB           6
+#define STEP_OBJ_UP         7
+#define STEP_BACKWARD       8
+#define STEP_HOLDING        9
+#define STEP_DONE           10
 
 static int nStep = STEP_WAIT;
 static std::string pc_topic;
@@ -88,12 +94,6 @@ static float fMoveTargetY = 0;
 static int nObjectCounter = 0;
 static int nTimeDelayCounter = 0;
 
-
-// 用于滤波的全局变量
-std::vector<geometry_msgs::Point> recent_points;
-const int REQUIRED_CONSECUTIVE_POINTS = 5;      // 需要连续检测到的次数
-const double DISTANCE_THRESHOLD = 0.05;         // 连续检测点的距离阈值（米）
-
 void GrabActionCallback(const geometry_msgs::Pose::ConstPtr& msg)
 {
     // 目标物品的坐标
@@ -112,12 +112,18 @@ void GrabActionCallback(const geometry_msgs::Pose::ConstPtr& msg)
     // 进入观测姿态
     right_position[0] = -0.6;
     right_position[1] = 1.57;
-    right_position[4] = 1.5;
+    right_position[2] = 0;
+    right_position[3] = 1.5;
+    right_position[4] = 0;
+    right_position[5] = 0;
     RightArmAction();
     // 左臂是固定姿势
     left_arm_msg.position[0] = 0.6;
     left_arm_msg.position[1] = -1.57;
+    left_arm_msg.position[2] = 0;
     left_arm_msg.position[3] = -1.5;
+    left_arm_msg.position[4] = 0;
+    left_arm_msg.position[5] = 0;
     left_arm_pub.publish(left_arm_msg);
 
     chest_height_msg.position[0] = 0.5;
@@ -127,12 +133,7 @@ void GrabActionCallback(const geometry_msgs::Pose::ConstPtr& msg)
     gripper_ctrl_msg.position[0] = 0.15;
     gripper_ctrl_pub.publish(gripper_ctrl_msg); 
 
-    // 开启YOLO识别
-    yolo_msg.data = "yolo start";
-    yolo_switch_pub.publish(yolo_msg);
-    ROS_INFO("[wpr2_right_bottle] --1-- 开始检测物品!");
-
-    nStep = STEP_FIND_OBJ;
+    nStep = STEP_INIT_POSE;
 }
 
 // 订阅/yolo_target_3d_point的回调函数，用于滤波和触发抓取
@@ -255,8 +256,6 @@ void YoloPointCallback(const geometry_msgs::PointStamped::ConstPtr& msg)
             // 清空数据，为下一次抓取做准备
             recent_points.clear();
         }
-
-        
     }
 }
 
@@ -346,7 +345,7 @@ int main(int argc, char **argv)
     right_arm_msg.velocity[2] = joint_speed;
     right_arm_msg.velocity[3] = joint_speed;
     right_arm_msg.velocity[4] = joint_speed;
-    right_arm_msg.velocity[5] = 8000;
+    right_arm_msg.velocity[5] = joint_speed;
 
     left_arm_msg.name.resize(6);
     left_arm_msg.position.resize(6);
@@ -389,13 +388,27 @@ int main(int argc, char **argv)
     ros::Rate r(30);
     while(nh.ok())
     {
+        // 1、初始姿态
+        if(nStep == STEP_INIT_POSE)
+        {
+            if(joints_arrived == true)
+            {
+                ROS_WARN("[wpr2_grab_bottle] 初始姿态完成，开始进行物品检测。");
+                // 开启YOLO识别
+                yolo_msg.data = "yolo start";
+                yolo_switch_pub.publish(yolo_msg);
+                nStep = STEP_FIND_OBJ;
+                continue;
+            }  
+            VelCmd(0,0,0);
+        }
+
         // 1、对物品位置进行滤波
         if(nStep == STEP_FIND_OBJ)
         {
             // 滤波逻辑移至YoloPointCallback中，由消息回调驱动
             // 主循环此处保持机器人静止，等待状态切换    
             VelCmd(0,0,0);
-            continue;
         }
     
         // 2、左右平移对准目标物品
@@ -421,7 +434,6 @@ int main(int argc, char **argv)
                 yolo_msg.data = "yolo start";
                 yolo_switch_pub.publish(yolo_msg);
                 nStep = STEP_FIND_OBJ;
-                continue;
             }
         }
 
@@ -434,7 +446,7 @@ int main(int argc, char **argv)
                 ctrl_msg.data = "odom_delta reset";
                 odom_ctrl_pub.publish(ctrl_msg);
 
-                fMoveTargetX = 0.5 + grab_forward_offset;
+                fMoveTargetX = grab_forward_range;
                 fMoveTargetY = 0;
                 nStep = STEP_FORWARD;
                 continue;
@@ -464,6 +476,8 @@ int main(int argc, char **argv)
                 joints_arrived = false;
 
                 nStep = STEP_GRAB;
+                ros::spinOnce();
+                sleep(1);
                 continue;
             }
         }
@@ -503,14 +517,13 @@ int main(int argc, char **argv)
                 ctrl_msg.data = "odom_delta reset";
                 odom_ctrl_pub.publish(ctrl_msg);
 
-                fMoveTargetX = -0.5 + grab_forward_offset;
+                fMoveTargetX = -grab_forward_range;
                 fMoveTargetY = 0;
 
                 nStep = STEP_BACKWARD;
                 continue;    
             }
         }
-
        
         // 7、带着物品后退
         if(nStep == STEP_BACKWARD)

@@ -166,15 +166,13 @@ int main(int argc, char **argv)
     ros::Rate r(30);
     while(nh.ok())
     {
-
         //1、抬起手臂
         if(nStep == STEP_HAND_UP)
         {
             if(joints_arrived == true)
             {
                 ROS_INFO("[wpr2_right_grab] --2-- 抬手完毕，往前伸手!");
-
-                right_position[0] = 1.3069;
+                right_position[0] = 1.3569;
                 right_position[1] = 1.0160;
                 right_position[2] = -1.4946;
                 right_position[3] = 1.7675;
@@ -193,7 +191,7 @@ int main(int argc, char **argv)
             {
                 ROS_INFO("[wpr2_right_grab] --3-- 伸手完毕，往前让物品进入夹爪!");
 
-                right_position[0] = 1.3386;
+                right_position[0] = 1.3886;
                 right_position[1] = 1.6764;
                 right_position[2] = -1.2390;
                 right_position[3] = 0.4614;
@@ -227,10 +225,13 @@ int main(int argc, char **argv)
             {
                 ROS_INFO("[wpr2_right_grab] 抓取完成!向上抬伸");
 
-                right_position[0] = 1.40;
+                right_position[0] = 1.45;
                 ArmAction();
 
-                nStep = STEP_REACH;
+                nStep = STEP_OBJ_UP;
+                ros::spinOnce();
+                r.sleep();
+                continue;
             }
         }
 
@@ -240,15 +241,18 @@ int main(int argc, char **argv)
            if(joints_arrived == true)
             {
                 ROS_INFO("[wpr2_right_grab] 物品抬升完成,收回手臂");
-                right_position[0] = 1.4764;
-                right_position[1] = 1.6435;
-                right_position[2] = 1.6219;
-                right_position[3] = -1.4708;
-                right_position[4] = -1.7136;
-                right_position[5] = -1.5270;
+                right_position[0] = 1.55;
+                right_position[1] = 1.5723;
+                right_position[2] = -1.5426;
+                right_position[3] = 1.3623;
+                right_position[4] = 1.4895;
+                right_position[5] = 0;
                 ArmAction();
                 
                 nStep = STEP_HAND_BACK;
+                ros::spinOnce();
+                r.sleep();
+                continue;
             }
         }
 
