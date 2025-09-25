@@ -137,7 +137,7 @@ class TfPublisherGui(QWidget):
 
         return layout
 
-    # *** 此方法已被修改以确保所有滑块都有初始值 ***
+    # *** 确保所有滑块都有初始值 ***
     def set_initial_positions(self):
         """
         为所有滑块建立一个完整的初始值记录，然后应用到UI上。

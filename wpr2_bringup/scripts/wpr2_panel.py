@@ -60,13 +60,13 @@ class WPR2Panel(QWidget):
             button.clicked.connect(callback)
             grid_layout.addWidget(button, row, col)
 
-        # === 新增：手爪控制滑杆 ===
+        # === 手爪控制滑杆 ===
         # 左手爪滑杆
         left_gripper_layout = QHBoxLayout()
         left_gripper_slider = QSlider(Qt.Horizontal)
-        # 修改: 将滑杆范围设置为 0-155，以便后续处理为 0-0.155
+        # 将滑杆范围设置为 0-155，以便后续处理为 0-0.155
         left_gripper_slider.setRange(0, 155)
-        self.left_gripper_value_label = QLabel('0.000') # 修改: 初始显示为浮点数
+        self.left_gripper_value_label = QLabel('0.000') 
         left_gripper_layout.addWidget(QLabel('左手爪:'))
         left_gripper_layout.addWidget(left_gripper_slider)
         left_gripper_layout.addWidget(self.left_gripper_value_label)
@@ -75,9 +75,9 @@ class WPR2Panel(QWidget):
         # 右手爪滑杆
         right_gripper_layout = QHBoxLayout()
         right_gripper_slider = QSlider(Qt.Horizontal)
-        # 修改: 将滑杆范围设置为 0-155，以便后续处理为 0-0.155
+        # 将滑杆范围设置为 0-155，以便后续处理为 0-0.155
         right_gripper_slider.setRange(0, 155)
-        self.right_gripper_value_label = QLabel('0.000') # 修改: 初始显示为浮点数
+        self.right_gripper_value_label = QLabel('0.000') 
         right_gripper_layout.addWidget(QLabel('右手爪:'))
         right_gripper_layout.addWidget(right_gripper_slider)
         right_gripper_layout.addWidget(self.right_gripper_value_label)
@@ -119,7 +119,7 @@ class WPR2Panel(QWidget):
         if rospy.is_shutdown():
             self.close()
 
-    # --- 修改: 滑杆回调函数 ---
+    # --- 滑杆回调函数 ---
     def left_gripper_slider_changed(self, value):
         """ 左手爪滑杆值变化时的回调函数 """
         # 将滑杆的整数值 (0-155) 转换为浮点数值 (0-0.155)

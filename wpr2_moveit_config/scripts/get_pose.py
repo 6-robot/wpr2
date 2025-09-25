@@ -26,7 +26,6 @@ class PoseDisplayGUI(QWidget):
         # 初始化UI
         self.init_ui()
         
-        # --- 新增内容 ---
         # 创建一个定时器来检查ROS master的状态
         self.ros_check_timer = QTimer(self)
         # 每1000毫秒（1秒）检查一次
