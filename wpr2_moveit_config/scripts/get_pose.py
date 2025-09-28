@@ -76,7 +76,6 @@ class PoseDisplayGUI(QWidget):
         self.setWindowTitle('机器人姿态获取工具')
         self.show()
         
-    # --- 新增函数 ---
     def check_ros_master(self):
         """
         定时检查ROS master是否仍在运行，如果不在则退出应用
