@@ -201,10 +201,10 @@ namespace wpbc_local_planner
             if(i == global_plan_.size()-1)
                 target_pose = pose_base; 
         }
-        cmd_vel.linear.x = target_pose.pose.position.x * 0.8;
+        cmd_vel.linear.x = target_pose.pose.position.x * 1.2;
         if(cmd_vel.linear.x < -0.3)
             cmd_vel.linear.x = -0.3;
-        cmd_vel.linear.y = target_pose.pose.position.y * 0.8;
+        cmd_vel.linear.y = target_pose.pose.position.y * 1.2;
         cmd_vel.angular.z = target_pose.pose.position.y * 3.0;
         
         return true;

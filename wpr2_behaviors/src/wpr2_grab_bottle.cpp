@@ -245,7 +245,7 @@ void YoloPointCallback(const geometry_msgs::PointStamped::ConstPtr& msg)
             fMoveTargetY = diff_y;
             ROS_WARN("[wpr2_grab_bottle] 平移对准坐标 x=%.2f, y=%.2f", fMoveTargetX, fMoveTargetY);
 
-            chest_height_msg.position[0] = 0.7 - (1.05-fObjGrabZ) + grab_lift_offset;
+            chest_height_msg.position[0] = 0.7 - (1.1-fObjGrabZ) + grab_lift_offset;
             ROS_WARN("[wpr2_grab_bottle] 升降高度 = %.2f" ,chest_height_msg.position[0]);
             if(chest_height_msg.position[0] < 0.4) chest_height_msg.position[0] = 0.4; //保护一下，某些情况下去除
             chest_height_pub.publish(chest_height_msg);
