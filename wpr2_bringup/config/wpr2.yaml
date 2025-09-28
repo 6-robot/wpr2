@@ -1,8 +1,8 @@
 chassis_type: "MODE_MECANUM" # MODE_MECANUM 麦轮底盘  or  MODE_OMNI 全向轮底盘
 
 zeros:
- femto_height: 0.1
- femto_pitch: 0.14
+ femto_height: 0.15
+ femto_pitch: 0.02
 
  chest_height: 0.7
 
