@@ -146,8 +146,8 @@ int main(int argc, char **argv)
     arm_ctrl_msg.position[0] = -0.6;
     arm_ctrl_msg.position[1] = 1.57;
     arm_ctrl_msg.position[2] = 0;
-    arm_ctrl_msg.position[3] = 0;
-    arm_ctrl_msg.position[4] = 1.0;
+    arm_ctrl_msg.position[3] = 1.0;
+    arm_ctrl_msg.position[4] = 0;
     arm_ctrl_msg.position[5] = 0;
     arm_ctrl_msg.velocity[0] = joint_speed;
     arm_ctrl_msg.velocity[1] = 2000;
