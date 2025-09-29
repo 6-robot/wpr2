@@ -7,8 +7,16 @@
   <!-- Map Server -->
   <node name="map_server" pkg="map_server" type="map_server" args="$(find wpr2_tutorials)/maps/map.yaml"/>
 
-  <!--- AMCL -->
+  <!-- AMCL定位（二选一） -->
   <include file="$(find wpr2_tutorials)/nav_lidar/amcl_omni.launch" />
+
+  <!-- 纯激光定位（二选一） -->
+  <!-- <node pkg="jie_ware" type="lidar_loc" name="lidar_loc" >
+      <param name="base_frame" value="base_footprint" />
+      <param name="odom_frame" value="odom" />
+      <param name="laser_frame" value="laser" />
+      <param name="laser_topic" value="scan" />
+  </node> -->
 
   <!--- move_base -->
   <node pkg="move_base" type="move_base" respawn="false" name="move_base"  output="screen">
