@@ -226,3 +226,19 @@ add_dependencies(wpr2_nav_arms ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPO
 target_link_libraries(wpr2_nav_arms
   ${catkin_LIBRARIES}
 )
+
+add_executable(wpr2_vel_demo
+  src/wpr2_vel_demo.cpp
+)
+add_dependencies(wpr2_vel_demo ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(wpr2_vel_demo
+  ${catkin_LIBRARIES}
+)
+
+add_executable(wpr2_joints_demo
+  src/wpr2_joints_demo.cpp
+)
+add_dependencies(wpr2_joints_demo ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(wpr2_joints_demo
+  ${catkin_LIBRARIES}
+)

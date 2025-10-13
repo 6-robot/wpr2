@@ -1,0 +1,7 @@
+<library path="lib/libwpbc_local_planner">
+	<class name="wpr2_local_planner/Wpr2LocalPlanner" type="wpr2_local_planner::Wpr2LocalPlanner" base_class_type="nav_core::BaseLocalPlanner">
+		<description>
+			The wpr2_local_planner package implements a plugin to the base_local_planner of the 2D navigation stack.
+		</description>
+	</class>
+</library>

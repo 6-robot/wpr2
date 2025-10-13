@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>wpbc_local_planner</name>
+  <name>wpr2_local_planner</name>
   <version>0.0.1</version>
-  <description>The wpbc_local_planner package</description>
+  <description>The wpr2_local_planner package</description>
 
   <maintainer email="zhangwanjie@6-robot.com">Zhang Wanjie</maintainer>
 
@@ -40,7 +40,7 @@
   <run_depend>pluginlib</run_depend>
 
    <export>
-    <nav_core plugin="${prefix}/wpbc_local_planner_plugin.xml"/>
+    <nav_core plugin="${prefix}/wpr2_local_planner_plugin.xml"/>
   </export>
 
 </package>

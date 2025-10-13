@@ -1,7 +1,0 @@
-<library path="lib/libwpbc_local_planner">
-	<class name="wpbc_local_planner/WpbcLocalPlanner" type="wpbc_local_planner::WpbcLocalPlanner" base_class_type="nav_core::BaseLocalPlanner">
-		<description>
-			The wpbc_local_planner package implements a plugin to the base_local_planner of the 2D navigation stack.
-		</description>
-	</class>
-</library>

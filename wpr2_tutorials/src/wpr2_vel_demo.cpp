@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 * 
-*  Copyright (c) 2017-2020, Waterplus http://www.6-robot.com
+*  Copyright (c) 2025-2035, Waterplus http://www.6-robot.com
 *  All rights reserved.
 * 
 *  Redistribution and use in source and binary forms, with or without
@@ -31,44 +31,32 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-/*!******************************************************************
- @author     ZhangWanjie
- ********************************************************************/
-
-#ifndef WPBC_LOCAL_PLANNER_H_
-#define WPBC_LOCAL_PLANNER_H_
+/* @author Zhang Wanjie                                             */
 
 #include <ros/ros.h>
-#include <nav_core/base_local_planner.h>
-#include <base_local_planner/goal_functions.h>
-#include <base_local_planner/odometry_helper_ros.h>
-#include <base_local_planner/costmap_model.h>
-#include <costmap_2d/costmap_2d_ros.h>
-#include <nav_msgs/Path.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <sensor_msgs/LaserScan.h>
-#include <tf/tf.h>
-#include <tf/transform_listener.h>
-#include <tf/transform_datatypes.h>
+#include <geometry_msgs/Twist.h>
 
-#define WPB_STEP_GOTO     1
-#define WPB_STEP_NEAR     2
-#define WPB_STEP_ARRIVED  3
-
-namespace wpbc_local_planner
+int main(int argc, char** argv)
 {
-  class WpbcLocalPlanner : public nav_core::BaseLocalPlanner
-  {
-  public:
-    WpbcLocalPlanner();
-    ~WpbcLocalPlanner();
-   
-    void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
-    bool setPlan(const std::vector<geometry_msgs::PoseStamped>& plan);
-    bool computeVelocityCommands(geometry_msgs::Twist& cmd_vel);
-    bool isGoalReached();
-  };
-}; // end namespace wpbc_local_planner
+  ros::init(argc, argv, "wpr2_vel_demo");
 
-#endif // WPBC_LOCAL_PLANNER_H_
+  ros::NodeHandle n;
+  ros::Publisher vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+
+  ros::Rate r(30);
+  while(ros::ok())
+  {
+    geometry_msgs::Twist vel_cmd;
+    vel_cmd.linear.x = 0.1;
+    vel_cmd.linear.y = 0;
+    vel_cmd.linear.z = 0;
+    vel_cmd.angular.x = 0;
+    vel_cmd.angular.y = 0;
+    vel_cmd.angular.z = 0;
+    vel_pub.publish(vel_cmd);
+    ros::spinOnce();
+    r.sleep();
+  }
+
+  return 0;
+}

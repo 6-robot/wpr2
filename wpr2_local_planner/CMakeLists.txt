@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(wpbc_local_planner)
+project(wpr2_local_planner)
 
 set(CMAKE_BUILD_TYPE Release)
 
@@ -21,7 +21,7 @@ find_package(OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES wpbc_local_planner
+  LIBRARIES wpr2_local_planner
   CATKIN_DEPENDS
     base_local_planner
     costmap_2d
@@ -42,19 +42,15 @@ include_directories(
 )
 
 install(FILES
-  wpbc_local_planner_plugin.xml
+  wpr2_local_planner_plugin.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-add_library(wpbc_local_planner
-  include/wpbc_local_planner/wpbc_local_planner.h
-  include/wpbc_local_planner/CLidarAC.h
-  include/wpbc_local_planner/wl_helper.h
-  src/wpbc_local_planner.cpp
-  src/CLidarAC.cpp
-  src/wl_helper.cpp
+add_library(wpr2_local_planner
+  include/wpr2_local_planner/wpr2_local_planner.h
+  src/wpr2_local_planner.cpp
 )
-add_dependencies(wpbc_local_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(wpbc_local_planner
+add_dependencies(wpr2_local_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(wpr2_local_planner
   ${catkin_LIBRARIES} ${OpenCV_LIBS}
 )

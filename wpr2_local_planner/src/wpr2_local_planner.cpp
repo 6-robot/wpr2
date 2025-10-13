@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 * 
-*  Copyright (c) 2017-2020, Waterplus http://www.6-robot.com
+*  Copyright (c) 2025-2035, Waterplus http://www.6-robot.com
 *  All rights reserved.
 * 
 *  Redistribution and use in source and binary forms, with or without
@@ -35,35 +35,30 @@
  @author     ZhangWanjie
  ********************************************************************/
 
-#include <wpbc_local_planner/wpbc_local_planner.h>
-#include <wpbc_local_planner/wl_helper.h>
+#include <wpr2_local_planner/wpr2_local_planner.h>
 #include <tf_conversions/tf_eigen.h>
 #include <pluginlib/class_list_macros.h>
-#include <wpbc_local_planner/CLidarAC.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
 
-// register this planner as a WpbcLocalPlanner plugin
-PLUGINLIB_EXPORT_CLASS( wpbc_local_planner::WpbcLocalPlanner, nav_core::BaseLocalPlanner)
+// register this planner as a Wpr2LocalPlanner plugin
+PLUGINLIB_EXPORT_CLASS( wpr2_local_planner::Wpr2LocalPlanner, nav_core::BaseLocalPlanner)
 
-static int nLidarPointNum = LIDAR_BUFF_LEN;
-static float ranges[LIDAR_BUFF_LEN];
-
-namespace wpbc_local_planner
+namespace wpr2_local_planner
 {
-    WpbcLocalPlanner::WpbcLocalPlanner()
+    Wpr2LocalPlanner::Wpr2LocalPlanner()
     {
         setlocale(LC_ALL,"");
     }
-    WpbcLocalPlanner::~WpbcLocalPlanner()
+    Wpr2LocalPlanner::~Wpr2LocalPlanner()
     {}
 
     tf::TransformListener* tf_listener_;
     costmap_2d::Costmap2DROS* costmap_ros_;
-    void WpbcLocalPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
+    void Wpr2LocalPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
     {
         tf_listener_ = new tf::TransformListener();
         costmap_ros_ = costmap_ros;
@@ -73,7 +68,7 @@ namespace wpbc_local_planner
     int target_index_;
     bool pose_adjusting_;
     bool goal_reached_;
-    bool WpbcLocalPlanner::setPlan(const std::vector<geometry_msgs::PoseStamped>& plan)
+    bool Wpr2LocalPlanner::setPlan(const std::vector<geometry_msgs::PoseStamped>& plan)
     {
         target_index_ = 0;
         global_plan_ = plan;
@@ -82,7 +77,7 @@ namespace wpbc_local_planner
         return true;
     }
 
-    bool WpbcLocalPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
+    bool Wpr2LocalPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     {
         // 获取代价地图的数据
         costmap_2d::Costmap2D* costmap = costmap_ros_->getCostmap();
@@ -209,7 +204,7 @@ namespace wpbc_local_planner
         
         return true;
     }
-    bool WpbcLocalPlanner::isGoalReached()
+    bool Wpr2LocalPlanner::isGoalReached()
     {
         return goal_reached_;
     }
