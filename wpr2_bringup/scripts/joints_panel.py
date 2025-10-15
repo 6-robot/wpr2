@@ -207,9 +207,14 @@ class TfPublisherGui(QWidget):
         non_gui_names = ["front_left_wheel_joint", "front_right_wheel_joint", "back_right_wheel_joint",
                          "back_left_wheel_joint", "femto_height", "femto_pitch"]
         non_gui_positions = [0.0, 0.0, 0.0, 0.0, self.femto_height_pos, self.femto_pitch_pos]
-
         joint_state_msg.name.extend(non_gui_names)
         joint_state_msg.position.extend(non_gui_positions)
+
+        gripper_names = ["left_joint_finger","right_joint_finger"]
+        gripper_positions = [0.5, 0.5]
+        joint_state_msg.name.extend(gripper_names)
+        joint_state_msg.position.extend(gripper_positions)
+
         self.joint_states_pub.publish(joint_state_msg)
 
         left_gripper_msg = JointState()

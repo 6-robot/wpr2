@@ -14,8 +14,9 @@ zeros:
  right_joint_2: 1.57
  right_joint_4: 1.163
 
-#  left_finger_joint: 0.03
-#  right_finger_joint: 0.03
+ left_joint_finger: 0.05
+ right_joint_finger: 0.05
+
 # grab:
 #  grab_y_offset: 0.0         #抓取前，对准物品，机器人的横向位移偏移量。大-往左修正；小-往右修正
 #  grab_lift_offset: 0.0      #手臂抬起高度的补偿偏移量。大-往高修正；小-往低修正
