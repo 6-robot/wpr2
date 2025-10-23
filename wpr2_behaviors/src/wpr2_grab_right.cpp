@@ -215,13 +215,17 @@ int main(int argc, char **argv)
                 ArmAction();
 
                 nStep = STEP_GRAB;
+                nTimeDelayCounter = 5 * 30;//抓取超时判定，因为抓硬的东西，手爪有可能闭合不到位
             }
         }
 
         //4、抓取物品
         if(nStep == STEP_GRAB)
         {
-            if(joints_arrived == true)
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_right_grab] 抓取倒计时 ... %d",nTimeDelayCounter / 30);
+            if(joints_arrived == true || nTimeDelayCounter <= 0)
             {
                 ROS_INFO("[wpr2_right_grab] 抓取完成!向上抬伸");
 
@@ -229,6 +233,7 @@ int main(int argc, char **argv)
                 ArmAction();
 
                 nStep = STEP_OBJ_UP;
+                nTimeDelayCounter = 5 * 30;
                 ros::spinOnce();
                 r.sleep();
                 continue;
@@ -238,7 +243,10 @@ int main(int argc, char **argv)
         //5、带着物品抬起
         if(nStep == STEP_OBJ_UP)
         {
-           if(joints_arrived == true)
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_right_grab] 抬起倒计时 ... %d",nTimeDelayCounter / 30);
+            if(joints_arrived == true || nTimeDelayCounter <= 0)
             {
                 ROS_INFO("[wpr2_right_grab] 物品抬升完成,收回手臂");
                 right_position[0] = 1.55;
@@ -250,6 +258,7 @@ int main(int argc, char **argv)
                 ArmAction();
                 
                 nStep = STEP_HAND_BACK;
+                nTimeDelayCounter = 5 * 30;
                 ros::spinOnce();
                 r.sleep();
                 continue;
@@ -258,7 +267,10 @@ int main(int argc, char **argv)
 
         if(nStep == STEP_HAND_BACK)
         {
-           if(joints_arrived == true)
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_right_grab] 收臂倒计时 ... %d",nTimeDelayCounter / 30);
+            if(joints_arrived == true || nTimeDelayCounter <= 0)
             {
                 ROS_INFO("[wpr2_right_grab] 物品抓取完成!");
                 std_msgs::String grab_res_msg;

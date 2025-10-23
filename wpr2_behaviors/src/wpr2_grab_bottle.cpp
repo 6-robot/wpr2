@@ -398,6 +398,7 @@ int main(int argc, char **argv)
                 yolo_msg.data = "yolo start";
                 yolo_switch_pub.publish(yolo_msg);
                 nStep = STEP_FIND_OBJ;
+                nTimeDelayCounter = 10 * 30; //开启识别倒计时，如果没找到物品就及时返回
                 continue;
             }  
             VelCmd(0,0,0);
@@ -406,9 +407,20 @@ int main(int argc, char **argv)
         // 1、对物品位置进行滤波
         if(nStep == STEP_FIND_OBJ)
         {
-            // 滤波逻辑移至YoloPointCallback中，由消息回调驱动
-            // 主循环此处保持机器人静止，等待状态切换    
+            // 识别逻辑移至YoloPointCallback中，由消息回调驱动
+            // 主循环此处进行超时判定 
             VelCmd(0,0,0);
+            
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_grab_bottle] 物品识别倒计时 ... %d",nTimeDelayCounter / 30);
+            if( nTimeDelayCounter <= 0)
+            {
+                ROS_WARN("[wpr2_grab_bottle] 没识别到物品，及时返回 not found 结果！");
+                result_msg.data = "not found";
+                result_pub.publish(result_msg);
+                nStep = STEP_DONE;
+            }
         }
     
         // 2、左右平移对准目标物品
@@ -426,14 +438,14 @@ int main(int argc, char **argv)
                 VelCmd(0,0,0);
                 ctrl_msg.data = "odom_delta reset";
                 odom_ctrl_pub.publish(ctrl_msg);
-                nTimeDelayCounter = 0;
 
                 ROS_WARN("[wpr2_grab_bottle] 移动完成后打开检测，再次进行物品对准确认。");
 
-                // 关闭物品检测
+                // 再次开启物品检测
                 yolo_msg.data = "yolo start";
                 yolo_switch_pub.publish(yolo_msg);
                 nStep = STEP_FIND_OBJ;
+                nTimeDelayCounter = 5 * 30; //开启识别倒计时，如果没找到物品就及时返回
             }
         }
 
@@ -475,6 +487,7 @@ int main(int argc, char **argv)
                 gripper_ctrl_pub.publish(gripper_ctrl_msg);
                 joints_arrived = false;
 
+                nTimeDelayCounter = 5 * 30;//抓取超时判定，因为抓硬的东西，手爪有可能闭合不到位
                 nStep = STEP_GRAB;
                 ros::spinOnce();
                 sleep(1);
@@ -486,7 +499,10 @@ int main(int argc, char **argv)
         if(nStep == STEP_GRAB)
         {
             VelCmd(0,0,0);
-            if( joints_arrived == true )
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_grab_bottle] 抓取倒计时 ... %d",nTimeDelayCounter / 30);
+            if( joints_arrived == true || nTimeDelayCounter <= 0)
             {
                 ROS_WARN("[wpr2_grab_bottle] 抓取完成，往上抬！");
                 
@@ -498,6 +514,7 @@ int main(int argc, char **argv)
                 right_position[5] = -1.3631;
                 RightArmAction();
 
+                nTimeDelayCounter = 5 * 30;
                 nStep = STEP_OBJ_UP; 
                 continue;     
             }
@@ -506,7 +523,10 @@ int main(int argc, char **argv)
         // 6、将物品上抬
         if(nStep == STEP_OBJ_UP)
         {
-            if( joints_arrived == true )
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_grab_bottle] 抬起倒计时 ... %d",nTimeDelayCounter / 30);
+            if( joints_arrived == true || nTimeDelayCounter <= 0)
             {
                 ROS_WARN("[wpr2_grab_bottle] 上抬完毕，开始往后退！");
 
@@ -552,6 +572,7 @@ int main(int argc, char **argv)
                 right_position[5] = 1.5130;
                 RightArmAction();
 
+                nTimeDelayCounter = 5 * 30;
                 nStep = STEP_HOLDING;
                 continue;
             }
@@ -560,10 +581,14 @@ int main(int argc, char **argv)
         // 8、持有物品
         if(nStep == STEP_HOLDING)
         {
-            if( joints_arrived == true )
+            nTimeDelayCounter --;
+            if(nTimeDelayCounter % 30 == 0)
+                ROS_INFO("[wpr2_grab_bottle] 收臂倒计时 ... %d",nTimeDelayCounter / 30);
+            if( joints_arrived == true  || nTimeDelayCounter <= 0)
             {
                 ROS_WARN("[wpr2_grab_bottle] 抓取动作完成！");
 
+                nTimeDelayCounter = 0;
                 nStep = STEP_DONE;
                 continue;    
             }
