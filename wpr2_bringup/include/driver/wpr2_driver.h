@@ -74,6 +74,7 @@ public:
 	int arJointPos[15];
 	int arJointCurrentRecv[15];
 	int arJointPosRecv[15];
+	int arJointPosLastRecv[15];
 	int nParseCount;
 
 	float fQuatW;

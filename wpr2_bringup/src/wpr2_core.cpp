@@ -68,6 +68,7 @@ static int nRightGripperPos;
 static int nRightGripperSpeed;
 
 bool bJointAction = false;
+int nActCounter = 0;
 
 void AccelerateControl()
 {
@@ -173,6 +174,7 @@ void LeftArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
         arLeftArmSpeed[i] = msg->velocity[i];
     }
     wpr2.SetLeftArm(arLeftArmPos,arLeftArmSpeed);
+    nActCounter = 0;
     bJointAction = true;
 }
 
@@ -183,6 +185,7 @@ void LeftGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
     nLeftGripperSpeed = msg->velocity[0];
     wpr2.SetLeftGripper(nLeftGripperPos,nLeftGripperSpeed);
     // ROS_INFO("[LeftGripper] 左手爪 = %d", nLeftGripperPos);
+    nActCounter = 0;
     bJointAction = true;
 }
 
@@ -199,6 +202,7 @@ void RightArmCallback(const sensor_msgs::JointState::ConstPtr& msg)
         arRightArmSpeed[i] = msg->velocity[i];
     }
     wpr2.SetRightArm(arRightArmPos,arRightArmSpeed);
+    nActCounter = 0;
     bJointAction = true;
 }
 
@@ -209,6 +213,7 @@ void RightGripperCallback(const sensor_msgs::JointState::ConstPtr& msg)
     nRightGripperSpeed = msg->velocity[0];
     wpr2.SetRightGripper(nRightGripperPos,nRightGripperSpeed);
     // ROS_INFO("[RightGripper] 右手爪 = %d", nRightGripperPos);
+    nActCounter = 0;
     bJointAction = true;
 }
 
@@ -224,6 +229,7 @@ void ChestHeightCallback(const sensor_msgs::JointState::ConstPtr& msg)
         int nTorsoSpeed = msg->velocity[0];
         // ROS_WARN("[ChestHeight 接收] msg->position[0] = (%.2f)",msg->position[0]);
         wpr2.SetTorsoHeight(nTorsoHeight,nTorsoSpeed);
+        nActCounter = 0;
         bJointAction = true;
     }
 }
@@ -584,14 +590,19 @@ int main(int argc, char** argv)
 
         if(bJointAction == true)
         {
-            bool res = wpr2.JointsArrived();
-            if(res == true)
+            nActCounter ++;
+            if( nActCounter % ( 1 * 20 ) == 0)
             {
-                std_msgs::String joints_res_msg;
-                joints_res_msg.data = "done";
-                joints_result_pub.publish(joints_res_msg);
-                bJointAction = false;
-                // ROS_WARN("[wpr2_core] 运动到位！");
+                bool res = wpr2.JointsArrived();
+                if(res == true)
+                {
+                    std_msgs::String joints_res_msg;
+                    joints_res_msg.data = "done";
+                    joints_result_pub.publish(joints_res_msg);
+                    bJointAction = false;
+                    nActCounter = 0;
+                    // ROS_WARN("[wpr2_core] 运动到位！");
+                }
             }
         }
 

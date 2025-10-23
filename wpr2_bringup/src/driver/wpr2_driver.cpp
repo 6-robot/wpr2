@@ -66,6 +66,7 @@ CWPR2_driver::CWPR2_driver()
 		arJointPos[i] = 0;
 		arJointCurrentRecv[i] = 0;
 		arJointPosRecv[i] = 0;
+		arJointPosLastRecv[i] = 0;
 	}
 	arJointSpeed[0] = 18000;
 	arJointPos[2] = -9000;
@@ -536,10 +537,11 @@ bool CWPR2_driver::JointsArrived()
 	bool bArrived = true;
 	for(int i=0;i<15;i++)
 	{
-		if(abs (arJointPosRecv[i] - arJointPos[i]) > 100 )
+		if(abs (arJointPosRecv[i] - arJointPosLastRecv[i]) > 100 )
 		{
 			bArrived = false;
 		}
+		arJointPosLastRecv[i] = arJointPosRecv[i];
 	}
 	return bArrived;
 }
